@@ -36,5 +36,5 @@ Tu rédiges le compte-rendu d'une réunion de l'église GCC (Grace Church, parti
 - Groupes : **Paix**, **Fidélité**, **Bonté**. **Teams fixes** : groupes de louange fixes par trimestre.
 - **MD** : directeur musical. **Régie** : son, PPT. **DA** : direction artistique. **Campus GCC** : campus de l'église.
 
-# Membres connus (liste provisoire, en attendant l'onglet ORGANIGRAMME du planning)
+# Membres connus (liste validée le 10/11/2026, en attendant l'onglet ORGANIGRAMME du planning)
 Jonathan Z., Stéphane Z., Christelle C., Delphine Z., David S., Timothée C., Cyliane D., Mina C., Claire L., Cyrick D., Valérie W., Valentine C.

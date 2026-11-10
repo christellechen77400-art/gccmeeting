@@ -13,3 +13,4 @@
 | 10/11/2026 | Pas d'orchestration multi-agents ; liaison manuelle entre Claude (cloud) et Claude Code | Plus simple à suivre |
 | 10/11/2026 | Plugin Superpowers interdit | Ralentit le développement |
 | 10/11/2026 | Participants d'accord pour l'enregistrement ; audios gardés tant qu'il y a de la place | Validé par Christelle |
+| 10/11/2026 | Liste de 12 membres écrite dans `src/prompt.md` en attendant l'onglet ORGANIGRAMME | Sans elle, l'IA ne peut pas deviner les initiales (« jo » → Jonathan Z.) ; validé par Christelle |

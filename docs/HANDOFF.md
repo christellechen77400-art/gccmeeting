@@ -2,6 +2,54 @@
 
 À mettre à jour à la fin de chaque conversation (Claude ou Claude Code). Le plus récent en haut.
 
+## 10/11/2026 — Claude Code, Mission 2 (notes → compte-rendu avec Claude)
+**Fait** (branche `mission-2-ia`, poussée, **pas fusionnée dans `main`**)
+- `npm run cr -- <fichier> --categorie "<Catégorie>"` :
+  1. lit un .txt, .md, .pdf ou .docx (`src/extract.ts`) ;
+  2. envoie le texte à Claude avec le SDK officiel et une sortie structurée (`src/cr.ts`, schéma dans `src/schema.ts`) ;
+  3. revalide le JSON, l'enregistre dans `out/<nom>.json`, puis lance le rendu de la mission 1.
+
+  La clé est `ANTHROPIC_API_KEY` dans `.env`. Le modèle est `ANTHROPIC_MODEL`, par défaut `claude-haiku-5-5`.
+- La consigne envoyée à l'IA est dans `src/prompt.md`. Elle reprend :
+  - les règles de SPEC §4 (ne rien inventer, « à confirmer », 3 points maximum, phrases courtes, « Prénom I. ») ;
+  - le glossaire de §5 ;
+  - le rôle de chaque bloc et les pictos ;
+  - les dates : année manquante déduite de la date de dépôt et signalée ;
+  - la liste de 12 membres, validée par Christelle.
+- `.env.example` est ajouté (créé par Christelle : une règle de permission empêche Claude Code d'écrire les fichiers `.env*`).
+- Corrections :
+  - le gras dans les étapes du bloc `objectif` garde le style du texte ;
+  - la page 2 du PDF a une marge crème de 12 mm en haut ;
+  - `package-lock.json` est resynchronisé avec `npm install` (commité avec la fonctionnalité).
+- Paquets ajoutés :
+  - `@anthropic-ai/sdk` : SDK officiel ;
+  - `zod` : schéma de la sortie structurée ;
+  - `unpdf` : texte des PDF ;
+  - `mammoth` : texte des .docx.
+- Tests : `npm test` → 10 tests OK ; `npm run typecheck` → sans erreur.
+  - Extraction vérifiée sur .txt, .pdf et .docx.
+  - Messages d'erreur vérifiés : usage, catégorie inconnue, clé manquante, clé refusée.
+  - Le PNG de l'exemple musiciens est identique au pixel près à celui de la mission 1.
+
+**Pas encore fait : les deux essais réels (étape 3)**
+- L'API Anthropic **refuse la clé** de `.env` (erreur 401, « Clé API refusée »).
+- Causes possibles :
+  - texte d'exemple `sk-ant-...` laissé à la place de la clé ;
+  - espace ou guillemets autour de la clé ;
+  - clé révoquée ;
+  - clé d'un autre type : une vraie clé commence par `sk-ant-api03-`.
+- Une fois la clé corrigée, lancer :
+  - `npm run cr -- exemples/notes/reunion-gcc.txt --categorie GCC`
+  - `npm run cr -- exemples/notes/reunion-musiciens.txt --categorie "Culte Franco"`
+- Ensuite, comparer les PNG avec `reference/exemple-cr-gcc.png` et `reference/exemple-cr-musiciens.png`, et lister les différences de contenu.
+
+**Points d'attention**
+- Pour éviter de deviner les initiales, la liste de membres est donnée à l'IA. Les essais sur ces deux réunions sont donc un peu plus faciles que la réalité.
+- `categorie` et `sous_titre` ne sont pas demandés à l'IA : ils viennent de la commande (plus tard, du dossier Drive).
+- Les fichiers `out/` ne sont pas commités.
+
+**Ensuite** : corriger la clé, faire les deux essais, comparer avec les références, puis valider la mission 2 avant de fusionner.
+
 ## 10/11/2026 — Claude Code, Mission 1 (suite) : validation et fusion
 **Fait**
 - Bandeau et champs ajoutés au JSON **validés par Christelle** ; `docs/SPEC.md` §4 mis à jour.
