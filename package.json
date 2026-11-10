@@ -1,0 +1,25 @@
+{
+  "name": "gccmeeting",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Comptes-rendus de réunion automatiques pour GCC (Grace Church, partie francophone).",
+  "type": "module",
+  "scripts": {
+    "render": "tsx src/render.ts",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "postinstall": "playwright install chromium"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/christellechen77400-art/gccmeeting.git"
+  },
+  "dependencies": {
+    "playwright": "1.57.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
