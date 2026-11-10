@@ -108,7 +108,7 @@ function renderBlock(b: Block, big = false): string {
       const steps = els.length
         ? `<div><div class="eyebrow" style="margin-bottom:2mm">${plain(b.titre_etapes ?? 'Étapes')}</div>`
           + `<div class="steps" style="grid-template-columns:repeat(${Math.min(els.length, 4)},1fr)">`
-          + els.map((e, i) => `<div><b>${i + 1}</b>${rich(elementText(e))}</div>`).join('')
+          + els.map((e, i) => `<div><span class="n">${i + 1}</span>${rich(elementText(e))}</div>`).join('')
           + '</div></div>'
         : '';
       return `<section><div class="goal${steps ? ' split' : ''}"><div class="txt">`
@@ -172,7 +172,8 @@ ${fontFace('Caladea', 'Caladea-Bold.ttf', 700)}
 ${fontFace('Carlito', 'Carlito-Regular.ttf', 400)}
 ${fontFace('Carlito', 'Carlito-Bold.ttf', 700)}
 :root{--bg:#F4EEE6;--card:#EAE0D2;--dark:#2E2118;--rust:#B4552F;--sage:#6E7B5C;--muted:#6B5D50;--line:#DCCFBD;--cat:${cat.color}}
-@page{size:210mm 297mm;margin:0}
+@page{size:210mm 297mm;margin:12mm 0 0;background:#F4EEE6}
+@page:first{margin:0}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:var(--bg);-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:Carlito,Calibri,sans-serif;color:var(--dark);font-size:10.5pt;line-height:1.38}
@@ -227,7 +228,8 @@ ul.dots li::before{content:"";position:absolute;left:.6mm;top:2.1mm;width:1.4mm;
 .goal p b{color:#fff}
 .steps{display:grid;gap:2mm}
 .steps div{border:0.25mm solid rgba(233,183,159,.35);border-radius:1.6mm;padding:2.4mm 2mm;font-size:8.6pt;color:#F4EEE6;line-height:1.25}
-.steps b{display:block;font-family:Caladea,serif;font-size:12pt;color:#E9B79F}
+.steps .n{display:block;font-family:Caladea,serif;font-weight:700;font-size:12pt;color:#E9B79F}
+.steps div b{color:#fff}
 .grid{display:grid;gap:3mm}
 .grid .card{height:100%}
 .card{background:var(--card);border-radius:2.2mm;padding:3.4mm 3.8mm;display:flex;gap:3.2mm;align-items:flex-start}
