@@ -1,0 +1,143 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Caladea;src:url(file:///usr/share/fonts/truetype/crosextra/Caladea-Regular.ttf)}
+@font-face{font-family:Caladea;font-weight:700;src:url(file:///usr/share/fonts/truetype/crosextra/Caladea-Bold.ttf)}
+@font-face{font-family:Caladea;font-style:italic;src:url(file:///usr/share/fonts/truetype/crosextra/Caladea-Italic.ttf)}
+@font-face{font-family:Carlito;src:url(file:///usr/share/fonts/truetype/crosextra/Carlito-Regular.ttf)}
+@font-face{font-family:Carlito;font-weight:700;src:url(file:///usr/share/fonts/truetype/crosextra/Carlito-Bold.ttf)}
+:root{--bg:#F4EEE6;--card:#EAE0D2;--dark:#2E2118;--rust:#B4552F;--sage:#6E7B5C;--ochre:#5E7487;--muted:#6B5D50;--line:#DCCFBD}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:Carlito,Calibri,sans-serif;color:var(--dark);font-size:10.5pt;line-height:1.38}
+.page{width:210mm;height:297mm;background:var(--bg);position:relative;overflow:hidden;padding:0 0 12mm}
+.cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7mm;padding:6mm 10mm 0}
+.col>section:first-child{margin-top:0}
+.page:last-child{page-break-after:auto}
+.foot{position:absolute;left:10mm;right:10mm;bottom:5.5mm;display:flex;justify-content:space-between;font-size:6.8pt;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.eyebrow{font-size:7pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--rust)}
+h1{font-family:Caladea,Cambria,serif;font-weight:700;font-size:23pt;line-height:1.05;color:#fff}
+h2{font-family:Caladea,Cambria,serif;font-weight:700;font-size:14.5pt;line-height:1.15;display:flex;align-items:center;gap:2.6mm;margin-bottom:3mm}
+h3{font-family:Caladea,Cambria,serif;font-weight:700;font-size:11pt;line-height:1.2}
+section{margin-top:6mm}
+.ico{width:5.2mm;height:5.2mm;flex:none;stroke:var(--rust);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ico.lg{width:7mm;height:7mm}
+.ico.sage{stroke:var(--sage)} .ico.ochre{stroke:var(--ochre)} .ico.light{stroke:#E9B79F}
+/* couverture */
+.cover{background:var(--dark);padding:8mm 10mm 7mm;position:relative;overflow:hidden;display:flex;align-items:flex-end;justify-content:space-between}
+.cover .eyebrow{color:#E9B79F}
+.cover .sub{color:#D9CBB8;font-size:9.5pt;margin-top:2.5mm}
+.cover .sub b{color:#fff}
+.rings{position:absolute;right:30mm;top:-30mm;width:70mm;height:70mm;border-radius:50%;border:0.3mm solid rgba(255,255,255,.07);box-shadow:0 0 0 6mm rgba(255,255,255,0),0 0 0 6.3mm rgba(255,255,255,.06),0 0 0 12mm rgba(255,255,255,0),0 0 0 12.3mm rgba(255,255,255,.05)}
+.keep{background:var(--card);border-radius:2.2mm;padding:4mm 4.2mm}
+.keep .eyebrow{margin-bottom:2.6mm;display:flex;align-items:center;gap:1.8mm}
+.keep ul{list-style:none;display:grid;gap:2.6mm}
+.keep li{display:flex;gap:2.6mm;align-items:flex-start}
+.keep li b{display:block}
+.keep li span{color:var(--muted);font-size:9.5pt}
+ul.dots{list-style:none;display:grid;gap:2mm}
+ul.dots li{padding-left:4mm;position:relative}
+ul.dots li::before{content:"";position:absolute;left:.6mm;top:2.1mm;width:1.4mm;height:1.4mm;border-radius:50%;background:var(--rust)}
+/* objectif */
+.goal{background:var(--dark);color:#fff;border-radius:2.2mm;padding:5mm 4.6mm;display:grid;gap:2.4mm}
+.goal .eyebrow{color:#E9B79F}
+.goal h3{font-size:13.5pt;color:#fff}
+.goal p{color:#D9CBB8;font-size:9.8pt}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:2mm;margin-top:1mm}
+.steps div{border:0.25mm solid rgba(233,183,159,.35);border-radius:1.6mm;padding:2.4mm 2mm;font-size:8.6pt;color:#F4EEE6;line-height:1.25}
+.steps b{display:block;font-family:Caladea,serif;font-size:12pt;color:#E9B79F}
+.cards{display:grid;gap:2.6mm}
+.card{background:var(--card);border-radius:2.2mm;padding:3.4mm 3.8mm;display:flex;gap:3.2mm;align-items:flex-start}
+.card p{font-size:9.6pt;color:#3E3229;margin-top:.8mm}
+.tag{display:inline-block;font-size:6.8pt;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--sage);margin-top:1.2mm}
+.campus{background:var(--rust);color:#fff;border-radius:2.2mm;padding:4.6mm;display:grid;gap:2mm}
+.campus h3{color:#fff;font-size:12.5pt;display:flex;gap:2.4mm;align-items:center}
+.campus p{font-size:9.8pt;color:#FBE9DF}
+.deadline{background:rgba(46,33,24,.22);border-radius:1.6mm;padding:2.4mm 3mm;font-size:9.6pt;color:#fff}
+.deadline b{font-family:Caladea,serif;font-size:11.5pt}
+</style></head><body>
+
+<!-- SVG symbols -->
+<svg width="0" height="0" style="position:absolute">
+ <symbol id="pin" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.8V5h6v5.8l2 3.2H7z"/><path d="M8 2h8"/></symbol>
+ <symbol id="history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></symbol>
+ <symbol id="target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></symbol>
+ <symbol id="sparkle" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></symbol>
+ <symbol id="drum" viewBox="0 0 24 24"><ellipse cx="12" cy="10" rx="8" ry="3"/><path d="M4 10v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/><path d="M7 3.5l4 5"/><path d="M17 3.5l-4 5"/></symbol>
+ <symbol id="guitar" viewBox="0 0 24 24"><path d="M14.5 9.5L20 4"/><path d="M18.5 2.5l3 3"/><path d="M10.2 9.3a3.4 3.4 0 0 0-4.9.6 3.2 3.2 0 0 0-.4.8 3 3 0 0 1-2.1 2.1 2.6 2.6 0 0 0-1 4.3l3.6 3.6a2.6 2.6 0 0 0 4.3-1 3 3 0 0 1 2.1-2.1 3.4 3.4 0 0 0 1.4-5.3"/><circle cx="9" cy="15" r="1.4"/></symbol>
+ <symbol id="piano" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M8 19v-6M12 19v-6M16 19v-6"/><path d="M3 13h18"/><path d="M6.5 5v8M10 5v8M14 5v8M17.5 5v8" stroke-width="2.2"/></symbol>
+ <symbol id="users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.3c2.1.7 3.5 2.8 3.5 5.7"/></symbol>
+ <symbol id="baton" viewBox="0 0 24 24"><path d="M4 20L15 9"/><circle cx="17" cy="7" r="2.5"/><path d="M9 18v3M13 18v3M17 18v3"/><path d="M8 18h10"/></symbol>
+ <symbol id="headphones" viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="2.8" y="14" width="4.6" height="6.5" rx="1.6"/><rect x="16.6" y="14" width="4.6" height="6.5" rx="1.6"/></symbol>
+ <symbol id="userplus" viewBox="0 0 24 24"><circle cx="10" cy="8" r="4"/><path d="M3 21c0-3.9 3.1-7 7-7 1.5 0 2.9.5 4 1.2"/><path d="M19 14v6M16 17h6"/></symbol>
+ <symbol id="tent" viewBox="0 0 24 24"><path d="M3 20L12 4l9 16z"/><path d="M12 4v16"/><path d="M9 20l3-5 3 5"/><path d="M1.5 20h21"/></symbol>
+ <symbol id="calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+ <symbol id="heart" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.5-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10C19.5 15.5 12 20 12 20z"/></symbol>
+ <symbol id="settings" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+</svg>
+
+
+<style>
+.top{display:grid;grid-template-columns:1fr 1fr;gap:6mm;padding:7mm 10mm 0;align-items:start}
+.y27{margin:7mm 10mm 0;border-top:0.4mm solid var(--line);padding-top:5mm}
+.y27 .big{font-family:Caladea,serif;font-weight:700;font-size:26pt;line-height:1;color:var(--rust);display:flex;align-items:baseline;gap:3mm;margin-bottom:4mm}
+.y27 .big span{font-size:10pt;font-family:Carlito,sans-serif;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:3mm}
+.row3 .card,.grid2 .card{height:100%}
+.goal{grid-template-columns:1fr 1.25fr;align-items:center;column-gap:6mm}
+.goal .txt{display:grid;gap:1.6mm}
+.goal .steps{margin-top:0}
+h2.sm{font-size:12.5pt;margin-bottom:2.6mm}
+</style>
+<svg width="0" height="0" style="position:absolute">
+ <symbol id="sprout" viewBox="0 0 24 24"><path d="M12 21v-9"/><path d="M12 12c0-4 3-7 8-7 0 4-3 7-8 7z"/><path d="M12 14c0-3-2.5-5.5-7-5.5 0 3 2.5 5.5 7 5.5z"/></symbol>
+ <symbol id="music" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></symbol>
+ <symbol id="hands" viewBox="0 0 24 24"><path d="M12 21V9.5c0-1.5-.6-2.6-1.6-3.5L8 4"/><path d="M12 21V9.5c0-1.5.6-2.6 1.6-3.5L16 4"/><path d="M8 4L5 9v5l4 4"/><path d="M16 4l3 5v5l-4 4"/></symbol>
+ <symbol id="book" viewBox="0 0 24 24"><path d="M3 5.5C5 4.5 8.5 4.3 12 6c3.5-1.7 7-1.5 9-.5V19c-2-1-5.5-1.2-9 .5-3.5-1.7-7-1.5-9-.5z"/><path d="M12 6v13.5"/></symbol>
+ <symbol id="brief" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M3 13h18"/></symbol>
+ <symbol id="shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></symbol>
+ <symbol id="flame" viewBox="0 0 24 24"><path d="M12 21c-4 0-6.5-2.6-6.5-6 0-3.7 3-5.6 3.5-9 2.3 1.4 3.5 3.4 3.5 5.5 1-.8 1.6-2 1.7-3.2 2.3 1.7 4.3 4.3 4.3 6.7 0 3.4-2.5 6-6.5 6z"/></symbol>
+ <symbol id="kids" viewBox="0 0 24 24"><circle cx="8" cy="7" r="2.5"/><circle cx="16.5" cy="9" r="2"/><path d="M3.5 20c0-3 2-5.5 4.5-5.5s4.5 2.5 4.5 5.5"/><path d="M13 20c0-2.4 1.5-4.5 3.5-4.5S20 17.6 20 20"/></symbol>
+ <symbol id="chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></symbol>
+</svg>
+<style>
+.top{display:grid;grid-template-columns:1.05fr 1fr;gap:6mm;padding:7mm 10mm 0;align-items:start}
+.body{padding:5mm 10mm 0;display:grid;gap:4.5mm}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:3mm}
+.g2 .card{height:100%}
+.theme{background:var(--dark);color:#fff;border-radius:2.2mm;padding:4.6mm 5mm;display:grid;grid-template-columns:1fr 1.15fr;gap:5mm;align-items:center}
+.theme .eyebrow{color:#E9B79F}
+.theme h3{color:#fff;font-size:14.5pt;line-height:1.15;margin-top:1.5mm}
+.pillars{display:grid;gap:2.2mm}
+.pillar{display:flex;gap:2.6mm;align-items:flex-start;border:0.25mm solid rgba(233,183,159,.35);border-radius:1.6mm;padding:2.4mm 3mm}
+.pillar b{font-family:Caladea,serif;font-size:11pt;color:#E9B79F;display:block}
+.pillar span{font-size:9.4pt;color:#F4EEE6}
+.chips{display:flex;flex-wrap:wrap;gap:1.4mm;margin-top:1.8mm}
+.chip{font-size:8.6pt;background:var(--bg);border-radius:5mm;padding:.6mm 2.4mm;color:var(--dark)}
+.meta{font-size:8.6pt;color:var(--muted);margin-top:1.4mm}
+.meta b{color:var(--dark)}
+h2.sm{font-size:12.5pt;margin-bottom:2.4mm}
+.rule{display:grid;grid-template-columns:1fr 1fr;gap:2mm;margin-top:1.8mm}
+.rule div{background:var(--bg);border-radius:1.6mm;padding:2mm 2.6mm;font-size:9pt}
+.rule b{display:block;font-family:Caladea,serif;font-size:10.5pt;color:var(--rust)}
+.ico.w{stroke:#E9B79F}
+</style>
+<style>
+.demo{width:210mm;background:var(--bg);padding:6mm;display:grid;gap:5mm}
+.hd{background:var(--dark);border-radius:2mm;padding:7mm 8mm;display:flex;justify-content:space-between;align-items:center;position:relative;overflow:hidden}
+.hd h1{font-size:19pt;margin-top:2mm}
+.hd .eyebrow{color:#E9B79F}
+.badge{display:flex;align-items:center;gap:2.6mm;border-radius:10mm;padding:2mm 4.4mm 2mm 2.4mm;color:#fff}
+.badge .dot{width:8mm;height:8mm;border-radius:50%;background:rgba(255,255,255,.18);display:grid;place-items:center}
+.badge .dot svg{width:4.6mm;height:4.6mm;stroke:#fff;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.badge b{display:block;font-family:Caladea,serif;font-size:11.5pt;line-height:1.1}
+.badge span{font-size:7.5pt;letter-spacing:.08em;text-transform:uppercase;opacity:.85}
+.date{font-size:9pt;color:#D9CBB8;margin-top:1.4mm}
+</style><div class="demo"><div class="hd"><div><div class="eyebrow" style="color:#B4552F;filter:brightness(1.35)">GCC · Coordination</div><h1>Décisions de la réunion</h1><div class="date">Réunion 4/10</div></div>
+<div class="badge" style="background:#B4552F"><div class="dot"><svg><use href="#sprout"/></svg></div><div><b>GCC</b><span>Coordination</span></div></div></div><div class="hd"><div><div class="eyebrow" style="color:#5E7487;filter:brightness(1.35)">Culte Franco · Louange</div><h1>Réunion des musiciens</h1><div class="date">Novembre 2026</div></div>
+<div class="badge" style="background:#5E7487"><div class="dot"><svg><use href="#music"/></svg></div><div><b>Culte Franco</b><span>Louange</span></div></div></div><div class="hd"><div><div class="eyebrow" style="color:#6E7B5C;filter:brightness(1.35)">EDD · École du dimanche</div><h1>Réunion des professeurs</h1><div class="date">Décembre 2026</div></div>
+<div class="badge" style="background:#6E7B5C"><div class="dot"><svg><use href="#kids"/></svg></div><div><b>EDD</b><span>École du dimanche</span></div></div></div><div class="hd"><div><div class="eyebrow" style="color:#A86A7A;filter:brightness(1.35)">DA · Direction artistique</div><h1>Point livrables Noël</h1><div class="date">Novembre 2026</div></div>
+<div class="badge" style="background:#A86A7A"><div class="dot"><svg><use href="#brief"/></svg></div><div><b>DA</b><span>Direction artistique</span></div></div></div><div class="hd"><div><div class="eyebrow" style="color:#C48A3A;filter:brightness(1.35)">Campus · GCC</div><h1>Organisation du campus</h1><div class="date">Janvier 2027</div></div>
+<div class="badge" style="background:#C48A3A"><div class="dot"><svg><use href="#flame"/></svg></div><div><b>Campus</b><span>GCC</span></div></div></div><div class="hd"><div><div class="eyebrow" style="color:#8C7B6B;filter:brightness(1.35)">Autre · Campus inter-église</div><h1>Réunion préparatoire</h1><div class="date">Septembre 2026</div></div>
+<div class="badge" style="background:#8C7B6B"><div class="dot"><svg><use href="#chat"/></svg></div><div><b>Autre</b><span>Campus inter-église</span></div></div></div></div></body></html>
