@@ -1,4 +1,4 @@
-// Schéma du JSON demandé à l'IA (docs/SPEC.md §4), utilisé pour la sortie structurée
+// Schéma du JSON demandé à l'IA (docs/SPEC.md §4), utilisé pour l'outil enregistrer_compte_rendu
 // et pour valider la réponse avant le rendu.
 // `categorie` et `sous_titre` (racine) ne sont pas demandés à l'IA : ils viennent du dossier Drive.
 
@@ -41,6 +41,16 @@ export const AiCompteRenduSchema = z.object({
 });
 
 export type AiCompteRendu = z.infer<typeof AiCompteRenduSchema>;
+
+export const TOOL_NAME = 'enregistrer_compte_rendu';
+
+// Pas de champ « type » dans l'outil : DeepSeek renvoie une erreur 422.
+const { $schema, ...inputSchema } = z.toJSONSchema(AiCompteRenduSchema);
+export const COMPTE_RENDU_TOOL = {
+  name: TOOL_NAME,
+  description: 'Enregistre le compte-rendu de la réunion au format imposé (docs/SPEC.md §4).',
+  input_schema: inputSchema as { type: 'object'; [key: string]: unknown },
+};
 
 // Contrôle à la compilation : la sortie de l'IA est bien un CompteRendu affichable.
 export const toCompteRendu = (ai: AiCompteRendu, categorie: string): CompteRendu => ({ ...ai, categorie });

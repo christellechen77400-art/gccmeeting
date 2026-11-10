@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { extractTextFromFile } from '../src/extract.ts';
-import { AiCompteRenduSchema } from '../src/schema.ts';
+import { AiCompteRenduSchema, COMPTE_RENDU_TOOL } from '../src/schema.ts';
 import { renderHtml } from '../src/template.ts';
 
 test('les exemples validés respectent le schéma demandé à l\'IA', () => {
@@ -17,6 +17,13 @@ test('le schéma refuse un type de bloc ou un picto inconnu', () => {
   const base = { titre: 'T', date: '2026-11', participants: [], a_retenir: [], a_confirmer: [] };
   assert.equal(AiCompteRenduSchema.safeParse({ ...base, blocs: [{ type: 'resume' }] }).success, false);
   assert.equal(AiCompteRenduSchema.safeParse({ ...base, blocs: [{ type: 'bilan', picto: 'emoji' }] }).success, false);
+});
+
+test('l\'outil enregistrer_compte_rendu : pas de champ « type » (erreur 422 chez DeepSeek)', () => {
+  assert.deepEqual(Object.keys(COMPTE_RENDU_TOOL), ['name', 'description', 'input_schema']);
+  assert.equal(COMPTE_RENDU_TOOL.name, 'enregistrer_compte_rendu');
+  assert.equal(COMPTE_RENDU_TOOL.input_schema.type, 'object');
+  assert.deepEqual(COMPTE_RENDU_TOOL.input_schema.required, ['titre', 'date', 'participants', 'a_retenir', 'blocs', 'a_confirmer']);
 });
 
 test('extraction du texte : .txt et .pdf', async () => {
