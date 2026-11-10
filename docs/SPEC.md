@@ -41,16 +41,31 @@ Le détail des écrans sera fixé dans l'artefact UI/UX.
 {
   "titre": "Réunion des musiciens",
   "date": "2026-11-09",
+  "categorie": "Culte Franco",
+  "sous_titre": "Louange",
   "participants": ["Jonathan Z.", "Stéphane Z.", "Christelle C."],
-  "a_retenir": [{"titre": "…", "detail": "…"}],
+  "a_retenir": [{"titre": "…", "detail": "…", "picto": "users"}],
   "blocs": [
-    {"type": "bilan|decisions|objectif|nouveautes|cartes|questions|prochaines_etapes",
+    {"type": "bilan|decisions|objectif|nouveautes|cartes|questions|prochaines_etapes|intertitre",
      "titre": "…",
-     "elements": [{"titre": "…", "texte": "…", "tags": ["…"], "qui": "…", "quand": "…"}]}
+     "picto": "…",
+     "sous_titre": "…",
+     "texte": "…",
+     "titre_etapes": "…",
+     "elements": [{"titre": "…", "texte": "…", "tags": ["…"], "qui": "…", "quand": "…", "picto": "…"}]}
   ],
   "a_confirmer": ["…"]
 }
 ```
+Champs ajoutés pour la mise en page (validés le 10/11/2026), tous optionnels :
+- `categorie` : `GCC`, `Culte Franco`, `EDD`, `DA`, `Campus GCC` ou `Autre` (par défaut `Autre`). Rempli par l'application d'après le sous-dossier Drive, pas par l'IA.
+- `sous_titre` (racine) : sous-titre de la catégorie dans le bandeau ; sinon celui par défaut (`docs/TEMPLATE.md`).
+- `picto` : nom d'un picto de `src/icons.ts` (sur un point « À retenir », un bloc ou un élément) ; sinon le picto par défaut du bloc.
+- `date` : `AAAA-MM-JJ`, ou `AAAA-MM` si le jour n'est pas connu (affiché « Novembre 2026 »).
+- Bloc `objectif` : `sous_titre` (petit texte au-dessus du titre), `texte` (paragraphe), `titre_etapes` (titre des étapes numérotées) ; les `elements` sont les étapes.
+- Bloc `intertitre` : séparateur de partie, `titre` en grand (ex. « 2027 ») et `sous_titre` à côté ; pas d'éléments.
+- Dans les textes, `**…**` met en gras.
+
 Règles données à l'IA : 3 points maximum dans « À retenir », phrases courtes, ne rien inventer, écrire « à confirmer » si un nom, une date ou une décision est incertain, utiliser la liste des membres pour corriger l'orthographe des noms.
 
 ## 5. Glossaire GCC (à donner à l'IA)
