@@ -8,9 +8,10 @@
 | 10/11/2026 | Audios et fichiers sources restent dans Drive | Ne pas alourdir l'application |
 | 10/11/2026 | Français uniquement | Réunions presque toujours en français |
 | 10/11/2026 | Transcription : Groq Whisper (free tier) | Gratuit pour notre volume, bon en français |
-| 10/11/2026 | Résumé : Claude Haiku par défaut, Sonnet en option | Moins d'1 centime par réunion ; pas de modèle chinois (données de l'église) |
+| 10/11/2026 | ~~Résumé : Claude Haiku par défaut, Sonnet en option~~ (remplacée, voir plus bas) | Moins d'1 centime par réunion ; pas de modèle chinois (données de l'église) |
 | 10/11/2026 | Notification par mail depuis le compte GCC Franco | Demandé par Christelle |
 | 10/11/2026 | Pas d'orchestration multi-agents ; liaison manuelle entre Claude (cloud) et Claude Code | Plus simple à suivre |
 | 10/11/2026 | Plugin Superpowers interdit | Ralentit le développement |
 | 10/11/2026 | Participants d'accord pour l'enregistrement ; audios gardés tant qu'il y a de la place | Validé par Christelle |
 | 10/11/2026 | Liste de 12 membres écrite dans `src/prompt.md` en attendant l'onglet ORGANIGRAMME | Sans elle, l'IA ne peut pas deviner les initiales (« jo » → Jonathan Z.) ; validé par Christelle |
+| 10/11/2026 | DeepSeek retenu à la place de Claude (choix de Christelle, 10/11/2026) : API compatible Anthropic, `deepseek-flash` par défaut, `deepseek-v4-pro` en option | Choix de Christelle. Remplace la ligne « Résumé : Claude Haiku… » et sa raison « pas de modèle chinois (données de l'église) » |
