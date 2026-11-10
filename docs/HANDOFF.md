@@ -2,6 +2,23 @@
 
 À mettre à jour à la fin de chaque conversation (Claude ou Claude Code). Le plus récent en haut.
 
+## 10/11/2026 — Claude Code, Mission 1 (suite) : validation et fusion
+**Fait**
+- Bandeau et champs ajoutés au JSON **validés par Christelle** ; `docs/SPEC.md` §4 mis à jour.
+- Bloc `questions` : affiché en cartes comme `decisions` (titre, texte, tags, picto point d'interrogation).
+- `exemples/tous-les-blocs.json` : un exemple de chaque type de bloc avec le contenu de la réunion GCC (thème 2027, règle de service, questions EDD, prochaines étapes, à confirmer). PNG vérifié.
+- Signalé : en plus de la demande, les blocs ne sont plus coupés entre deux pages du PDF (`break-inside: avoid`). L'exemple musiciens est inchangé (PNG identique au pixel près).
+- Tests : `npm test` → 5 tests OK.
+- `mission-1-rendu` fusionnée dans `main` (tag `BeforeAnySignificantChange-MAJ01` posé sur `main` avant la fusion), puis push.
+
+**Points d'attention**
+- `tous-les-blocs` tient sur **2 pages** (1,34 page) : normal avec tous les blocs ; le PDF passe à la page 2 sans couper de bloc, mais la page 2 n'a pas de marge en haut.
+- Date de l'exemple GCC : « Réunion 4/10 » (pas de date réelle connue, affichée telle quelle et listée dans « À confirmer »).
+- Dans les étapes du bloc `objectif`, le gras `**…**` hérite du style du numéro (grand, couleur claire) : ne pas l'utiliser là pour l'instant ; à corriger dans une prochaine mission.
+- Pour pousser vers GitHub : `gh` installé et connecté au compte `christellechen77400-art`.
+
+**Ensuite** : Mission 2 (extraction de texte + résumé Claude → JSON).
+
 ## 10/11/2026 — Claude Code, Mission 1 (rendu PDF + PNG)
 **Fait** (branche `mission-1-rendu`, pas encore fusionnée dans `main`)
 - Projet Node.js + TypeScript : `npm install` (installe aussi Chromium pour Playwright).
