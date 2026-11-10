@@ -35,6 +35,16 @@ test('le texte est échappé et **gras** est rendu', () => {
   assert.ok(html.includes('&lt;script&gt;x&lt;/script&gt; <b>oui</b>'));
 });
 
+test('le bloc questions affiche titre, texte et tags en cartes', () => {
+  const html = renderHtml({
+    titre: 'T', date: '2026-11',
+    blocs: [{ type: 'questions', elements: [{ titre: 'Nouveaux musiciens ?', texte: 'Pour le groupe Bonté.', tags: ['Mina C.'] }] }],
+  });
+  assert.ok(html.includes('<div class="card"><svg class="ico lg"><use href="#help"/></svg>'));
+  assert.ok(html.includes('<h3>Nouveaux musiciens ?</h3><p>Pour le groupe Bonté.</p>'));
+  assert.ok(html.includes('<span class="tag">Mina C.</span>'));
+});
+
 test('blocs vides non affichés, « À retenir » limité à 3 points', () => {
   const html = renderHtml({
     titre: 'T', date: '2026-11',

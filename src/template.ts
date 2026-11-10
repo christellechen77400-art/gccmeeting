@@ -103,7 +103,6 @@ function renderBlock(b: Block, big = false): string {
       return `<div class="inter"><div class="big">${plain(b.titre)}`
         + (b.sous_titre ? ` <span>${plain(b.sous_titre)}</span>` : '') + '</div></div>';
     case 'bilan':
-    case 'questions':
       return `<section>${heading(b, big)}${dots(els.map(elementText))}</section>`;
     case 'objectif': {
       const steps = els.length
@@ -126,6 +125,7 @@ function renderBlock(b: Block, big = false): string {
         + '</div></section>';
     case 'cartes':
     case 'decisions':
+    case 'questions':
     case 'nouveautes': {
       const cols = b.type === 'nouveautes' ? Math.min(els.length, 2) : gridCols(els.length);
       const iconCls = b.type === 'nouveautes' ? ' sage' : '';
