@@ -3,6 +3,7 @@
 
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 import { CATEGORIES } from './categories.ts';
 import { renderHtml } from './template.ts';
@@ -51,14 +52,17 @@ export async function render(jsonPath: string, outDir = 'out'): Promise<{ pdf: s
   return { pdf, png };
 }
 
-const jsonPath = process.argv[2];
-if (!jsonPath) {
-  console.error('Usage : npm run render -- <fichier.json>');
-  process.exit(1);
-}
-render(jsonPath)
-  .then(({ pdf, png }) => console.log(`PDF : ${pdf}\nPNG : ${png}`))
-  .catch((err: Error) => {
-    console.error(`Erreur : ${err.message}`);
+// Lancé directement (npm run render), pas importé par un autre script.
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const jsonPath = process.argv[2];
+  if (!jsonPath) {
+    console.error('Usage : npm run render -- <fichier.json>');
     process.exit(1);
-  });
+  }
+  render(jsonPath)
+    .then(({ pdf, png }) => console.log(`PDF : ${pdf}\nPNG : ${png}`))
+    .catch((err: Error) => {
+      console.error(`Erreur : ${err.message}`);
+      process.exit(1);
+    });
+}
