@@ -1,0 +1,56 @@
+{
+  "titre": "Décisions de la réunion",
+  "date": "Réunion 4/10",
+  "categorie": "GCC",
+  "sous_titre": "Coordination franco",
+  "participants": ["Jonathan Z.", "Stéphane Z.", "Christelle C."],
+  "a_retenir": [
+    {"titre": "Thème 2027", "detail": "Communion fraternelle, vie et croissance spirituelle.", "picto": "sprout"},
+    {"titre": "Interfranco T1 2027", "detail": "« Devoir d'un chrétien ».", "picto": "chat"},
+    {"titre": "Règle de service 2027", "detail": "Culte Franco : être baptisé. Autres services : pas d'âge minimum.", "picto": "shield"}
+  ],
+  "blocs": [
+    {"type": "bilan", "titre": "Règle de service 2027", "picto": "shield",
+     "elements": [
+       {"texte": "Culte Franco : **être baptisé**."},
+       {"texte": "Autres services : **pas d'âge minimum**."},
+       {"texte": "Un âge minimum de 16 à 18 ans a été écarté."}
+     ]},
+    {"type": "intertitre", "titre": "2027", "sous_titre": "Thème, accompagnement, EDD et campus"},
+    {"type": "objectif", "sous_titre": "Thème 2027 · Franco", "titre": "Communion fraternelle, vie et croissance spirituelle",
+     "titre_etapes": "Deux piliers",
+     "elements": [
+       {"texte": "Prière : portée par Jonathan, Stéphane et Christelle, avec les teams fixes."},
+       {"texte": "Louange : d'abord entre nous, puis on la partage à l'église."}
+     ]},
+    {"type": "decisions", "titre": "Décisions",
+     "elements": [
+       {"titre": "« Devoir d'un chrétien »", "texte": "Thème du premier trimestre.", "tags": ["Interfranco · T1 2027"], "picto": "chat"},
+       {"titre": "EDD 高班", "texte": "Une personne mène la louange avec un ancien à ses côtés.", "picto": "kids"}
+     ]},
+    {"type": "cartes", "titre": "Accompagnement 2027", "picto": "sprout",
+     "elements": [
+       {"titre": "Suivi spirituel", "texte": "Étude biblique et partage, une fois tous les deux mois.", "tags": ["Argent", "Mariage", "Éternel / temporaire", "Société / Royaume"], "qui": "Delphine Z.", "picto": "book"},
+       {"titre": "Vie d'adulte", "texte": "Ateliers pratiques, par exemple savoir lire un contrat. Animés par des frères et sœurs.", "quand": "Mi à fin 2027", "picto": "brief"}
+     ]},
+    {"type": "nouveautes", "titre": "Campus 2027", "picto": "flame",
+     "elements": [
+       {"titre": "Veillée feu de camp", "texte": "Séance profonde et louange. Sans feu possible : sous le préau ou dans une grande salle.", "picto": "flame"}
+     ]},
+    {"type": "questions", "titre": "Questions ouvertes",
+     "elements": [
+       {"titre": "Nouveaux musiciens à l'EDD ?", "texte": "Question ouverte pour six jeunes du groupe Bonté.", "tags": ["Cyliane D.", "Mina C.", "Claire L.", "Cyrick D.", "Valérie W.", "Valentine C."], "picto": "music"}
+     ]},
+    {"type": "prochaines_etapes", "titre": "Prochaines étapes",
+     "elements": [
+       {"qui": "Delphine Z.", "texte": "Suivi spirituel : étude biblique et partage", "quand": "Tous les deux mois"},
+       {"texte": "Ateliers vie d'adulte", "quand": "Mi à fin 2027"},
+       {"texte": "Teams fixes 2027 : voir le fichier de scénarios"}
+     ]}
+  ],
+  "a_confirmer": [
+    "Réponse des six jeunes du groupe Bonté pour jouer à l'EDD.",
+    "Lieu de la veillée si le feu n'est pas possible : préau ou grande salle.",
+    "Date exacte de la réunion (le document indique seulement « Réunion 4/10 »)."
+  ]
+}

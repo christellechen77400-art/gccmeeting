@@ -1,0 +1,43 @@
+{
+  "titre": "Réunion des musiciens",
+  "date": "2026-11",
+  "categorie": "Culte Franco",
+  "sous_titre": "Louange",
+  "participants": [],
+  "a_retenir": [
+    {"titre": "Groupes de louange fixes", "detail": "Par trimestre, à mettre en place en 2027.", "picto": "users"},
+    {"titre": "Atelier louange", "detail": "Au moins une fois par trimestre, en semaine. Dates à fixer.", "picto": "target"},
+    {"titre": "Campus inter-église 2027", "detail": "Se manifester auprès de Timothée C. avant fin décembre 2026.", "picto": "tent"}
+  ],
+  "blocs": [
+    {"type": "bilan", "titre": "Bilan 2026", "picto": "history",
+     "elements": [
+       {"texte": "L'équipe est alignée : chacun veut **progresser** sur son instrument et en équipe, **s'entraider** et s'entraîner ensemble."},
+       {"texte": "L'organisation actuelle est jugée **plutôt bonne**."},
+       {"texte": "Cette année, nous avons fonctionné avec des **groupes fixes entre musiciens**."}
+     ]},
+    {"type": "intertitre", "titre": "2027", "sous_titre": "Objectif, instruments et nouveautés"},
+    {"type": "objectif", "sous_titre": "Objectif commun", "titre": "Continuer à progresser et grandir ensemble",
+     "texte": "Avec les groupes fixes, l'objectif est de se réunir **au moins une fois par trimestre** autour d'un **atelier louange en semaine**.",
+     "titre_etapes": "Comment se passe un atelier",
+     "elements": [
+       {"texte": "Chaque groupe fixe travaille 2 ou 3 chants"},
+       {"texte": "Il présente une mini séance de louange"},
+       {"texte": "Les autres groupes font des retours constructifs"}
+     ]},
+    {"type": "cartes", "titre": "Objectifs par instrument", "picto": "settings",
+     "elements": [
+       {"titre": "Batterie", "texte": "Construire un vocabulaire commun, à intégrer dans GCC, pour mieux savoir ce qu'on joue.", "tags": ["Batterie électrique choisie"], "picto": "drum"},
+       {"titre": "Guitare", "texte": "Continuer à progresser en autodidacte sur la guitare électrique.", "picto": "guitar"},
+       {"titre": "Piano", "texte": "Jouer avec un Mac branché au piano : bibliothèques de sons et plugins en cours d'achat. Réfléchir à équiper tout le monde.", "picto": "piano"}
+     ]},
+    {"type": "nouveautes", "titre": "Nouveautés", "picto": "sparkle",
+     "elements": [
+       {"titre": "Groupes de louange fixes", "texte": "Même présidence, mêmes choristes, même régie et mêmes musiciens pendant tout un trimestre.", "picto": "users"},
+       {"titre": "Nouveau guitariste", "texte": "David S. rejoint la louange franco à partir de mars 2027.", "picto": "userplus"},
+       {"titre": "Retours in-ear sans fil", "texte": "Le matériel de la régie est entièrement renouvelé, avec des boîtiers in-ear pour les musiciens.", "picto": "headphones"},
+       {"titre": "Directeur musical (MD)", "texte": "Rôle à tester pendant les ateliers louange, avant de l'intégrer au culte franco.", "picto": "baton"}
+     ]}
+  ],
+  "a_confirmer": []
+}
