@@ -242,6 +242,9 @@ ul.dots li::before{content:"";position:absolute;left:.6mm;top:2.1mm;width:1.4mm;
 .next i{font-style:normal;color:var(--rust)}
 .confirm{border:0.3mm dashed var(--rust);border-radius:2.2mm;padding:3.4mm 4.2mm;font-size:9.6pt}
 .confirm .eyebrow{margin-bottom:2mm;display:flex;align-items:center;gap:1.8mm}
+/* PDF de plusieurs pages : ne pas couper un bloc, ne pas laisser un titre seul en bas de page */
+.keep,.goal,.card,.next .row,.confirm,.inter{break-inside:avoid}
+h2,.inter{break-after:avoid}
 </style></head><body>
 <svg width="0" height="0" style="position:absolute">
 ${iconSymbols()}
