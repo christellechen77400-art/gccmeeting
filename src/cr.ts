@@ -44,7 +44,8 @@ async function askModel(text: string, categorie: string, depositDate: string): P
     });
     if (response.stop_reason === 'refusal') throw new Error('Le modèle a refusé de traiter ces notes.');
     if (response.stop_reason === 'max_tokens') throw new Error('Réponse du modèle coupée (trop longue).');
-    console.log(`${response.model} : ${response.usage.input_tokens} jetons en entrée, ${response.usage.output_tokens} en sortie.`);
+    const cached = response.usage.cache_read_input_tokens ?? 0;
+    console.log(`${response.model} : ${response.usage.input_tokens + cached} jetons en entrée (dont ${cached} en cache), ${response.usage.output_tokens} en sortie.`);
 
     const call = response.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use' && b.name === TOOL_NAME);
     const checked = AiCompteRenduSchema.safeParse(call?.input);
