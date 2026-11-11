@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { basename, dirname } from 'node:path';
 
 const GROUPS_PATH = new URL('../config/groupes.json', import.meta.url);
+const DIRECTORY_PATH = new URL('../config/annuaire.json', import.meta.url);
 const HEAD_LINES = 3; // la ligne « Absents » est cherchée dans les premières lignes non vides
 const ABSENTS_START = /^\s*absent(?:e)?s?\s*:\s*/i;
 // Fin de la liste : un point suivi d'un autre mot que « et » (« David S. Bonjour… »), ou en fin de ligne.
@@ -15,6 +16,16 @@ export type Groups = Record<string, string[]>;
 
 export function loadGroups(): Groups {
   return JSON.parse(readFileSync(GROUPS_PATH, 'utf-8')) as Groups;
+}
+
+// Annuaire : toutes les personnes de l'organigramme, au format « Prénom I. ».
+export function loadDirectory(): string[] {
+  return JSON.parse(readFileSync(DIRECTORY_PATH, 'utf-8')) as string[];
+}
+
+// Les groupes ne devraient contenir que des noms de l'annuaire : un nom inconnu est signalé, mais gardé.
+export function membersNotInDirectory(members: string[], directory: string[]): string[] {
+  return members.filter((m) => !directory.includes(m));
 }
 
 // Le groupe vient de --groupe, sinon du dossier du fichier (ex. « Culte Franco/Musiciens/notes.txt »).

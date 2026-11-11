@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { extractAbsents, loadGroups, resolveGroup, splitPresence } from '../src/participants.ts';
+import { extractAbsents, loadDirectory, loadGroups, membersNotInDirectory, resolveGroup, splitPresence } from '../src/participants.ts';
 import { applyReplacements, checkCompteRendu } from '../src/postprocess.ts';
 import { renderHtml } from '../src/template.ts';
 
@@ -33,10 +33,19 @@ test('présents = membres du groupe moins les absents (prénom seul ou nom compl
 test('groupe : option --groupe, sinon dossier du fichier, sinon aucun', () => {
   const groups = loadGroups();
   assert.ok(groups['Musiciens'].length > 0);
+  assert.deepEqual(groups['Coordination Franco'], ['Jonathan Z.', 'Stéphane Z.', 'Christelle C.']);
   assert.equal(resolveGroup(groups, 'notes.txt', 'Musiciens'), 'Musiciens');
   assert.equal(resolveGroup(groups, 'Drive/Culte Franco/Musiciens/notes.txt'), 'Musiciens');
   assert.equal(resolveGroup(groups, 'exemples/notes/reunion-gcc.txt'), undefined);
   assert.throws(() => resolveGroup(groups, 'notes.txt', 'Chorale'), /Groupe inconnu/);
+});
+
+test('annuaire : tous les membres des groupes y sont ; un nom inconnu est repéré', () => {
+  const directory = loadDirectory();
+  for (const [name, members] of Object.entries(loadGroups())) {
+    assert.deepEqual(membersNotInDirectory(members, directory), [], name);
+  }
+  assert.deepEqual(membersNotInDirectory(['Jonathan Z.', 'Inconnu X.'], directory), ['Inconnu X.']);
 });
 
 test('remplacements fixes : mots entiers, dans toutes les chaînes', () => {
