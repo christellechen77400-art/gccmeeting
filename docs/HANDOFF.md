@@ -39,25 +39,66 @@
   - messages d'erreur : usage, catégorie inconnue, clé manquante, clé refusée ;
   - le PNG de l'exemple musiciens est identique au pixel près à celui de la mission 1.
 
-**Pas encore fait : les deux essais réels**
-- DeepSeek **refuse la clé** de `.env` : « Authentication Fails, Your api key: ****caf4 is invalid ».
-  - L'adresse `ANTHROPIC_BASE_URL` est bonne : c'est bien DeepSeek qui répond.
-  - À vérifier : la clé a été recopiée en entier, sans espace ni guillemets, et elle est active sur platform.deepseek.com.
-- Une fois la clé corrigée, lancer :
+**Essais réels (11/11/2026, `deepseek-flash`)**
+- Les deux commandes marchent : JSON valide du premier coup, PDF + PNG produits.
   - `npm run cr -- exemples/notes/reunion-gcc.txt --categorie GCC`
   - `npm run cr -- exemples/notes/reunion-musiciens.txt --categorie "Culte Franco"`
-- Ensuite, comparer avec `reference/exemple-cr-gcc.png` et `reference/exemple-cr-musiciens.png`, et lister les écarts de contenu.
-- Pas encore vérifié avec DeepSeek :
-  - que les noms de modèle `deepseek-flash` et `deepseek-v4-pro` sont acceptés ;
-  - que `thinking: disabled` est accepté.
+- Vérifié chez DeepSeek :
+  - `deepseek-flash` et `deepseek-v4-pro` sont acceptés ;
+  - `thinking: disabled` est accepté ;
+  - l'outil sans `type` est accepté.
+- Les deux comptes-rendus tiennent sur **2 pages** (1525 px et 1355 px pour 1123), alors que les références en font 1.
+
+Écarts de contenu avec `reference/exemple-cr-gcc.png` :
+- **Erreurs** :
+  - « Nouveaux musiciens à mettre EDD ? » devient une **décision** (« à intégrer à l'EDD »), alors que c'est une question ouverte.
+  - Le groupe **Bonté** est oublié.
+  - « EDD GAO » reste « EDD Gao » au lieu de « EDD 高班 », pourtant donné dans le glossaire.
+  - La règle « Franco : baptisé / reste du service : pas d'âge minimum » est présentée comme une « Règle EDD ». La référence en fait une « Règle de service 2027 ».
+- **Choix différents** :
+  - Titre : « Thème 2027 et organisation du franco » au lieu de « Décisions de la réunion ».
+  - Date : « 4 octobre 2026 » déduit de « Réunion 4/10 », signalé dans « À confirmer ». La référence garde « Réunion 4/10 ».
+  - La sortie a un bloc « À retenir » (3 points), la référence n'en a pas.
+  - Accompagnement découpé en 4 cartes au lieu de 2.
+  - « Louange : entre nous puis diffusion » au lieu de « partage à l'église ».
+  - Teams fixes : dans « À confirmer » au lieu du pied de page.
+- **Forme** :
+  - Trop de gras : souvent plus de 2 groupes de mots par phrase, malgré la consigne.
+  - Des étiquettes inutiles sur chaque carte (« EDD », « campus »…).
+
+Écarts de contenu avec `reference/exemple-cr-musiciens.png` :
+- **Erreurs** :
+  - Participants : « Christelle C. » est **inventée**, à cause de la ligne « Corrections apportées par Christelle ». Elle contredit en plus « Liste des participants présents » dans « À confirmer ».
+  - Les objectifs par instrument (batterie, guitare, piano) sont rangés dans le **Bilan**. La référence en fait le bloc « Objectifs par instrument » de 2027.
+  - « Cette année, groupes fixes entre musiciens » est absent du bilan.
+- **Choix différents** :
+  - La sortie ajoute un bloc « Prochaines étapes » (4 lignes, dont l'arrivée de David S. qui répète « Nouveautés »).
+  - « À confirmer » a 3 points, la référence n'en a aucun.
+  - « Équiper tous les pianistes d'un Mac » est une interprétation : les notes disent « équiper tout le monde ».
+- **Conforme** :
+  - « À retenir » : les 3 bons points.
+  - Objectif commun et ses 3 étapes.
+  - Nouveautés dans l'ordre demandé.
+  - « Davidson » corrigé en David S.
+  - Date « Novembre 2026 ».
+- **Petits écarts** : « fin décembre » et « mars » sans l'année (la référence dit 2026 et 2027), titre « Réunion annuelle des musiciens ».
+
+Même notes GCC avec `deepseek-v4-pro` (essai rapide) :
+- Mieux : la question des nouveaux musiciens reste une question, et 高班 est utilisé.
+- Toujours : Bonté oublié, et la règle est présentée comme « Règle 2027 musiciens ».
+- 2 852 jetons en entrée, 1 188 en sortie.
 
 **Points d'attention**
+- **`.env.example` est cassé dans le commit `236deb1`** : il ne contient plus que « … » (aucune clé dedans). Christelle doit relancer la commande `printf` complète, puis commiter le fichier.
 - DeepSeek remplace la décision « pas de modèle chinois (données de l'église) » : les notes de réunion, avec les noms des membres, partent chez DeepSeek.
 - La liste de membres est donnée à l'IA : les essais sur ces deux réunions sont un peu plus faciles que la réalité.
 - `categorie` et `sous_titre` ne sont pas demandés à l'IA : ils viennent de la commande (plus tard, du dossier Drive).
 - Les fichiers `out/` ne sont pas commités.
 
-**Ensuite** : corriger la clé DeepSeek, faire les deux essais, comparer avec les références, puis valider la mission 2 avant de fusionner.
+**Ensuite** :
+1. Christelle choisit entre `deepseek-flash` et `deepseek-v4-pro`.
+2. Ajuster `src/prompt.md` selon les écarts ci-dessus.
+3. Valider la mission 2 avant de fusionner.
 
 ## 10/11/2026 — Claude Code, Mission 1 (suite) : validation et fusion
 **Fait**
