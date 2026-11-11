@@ -135,11 +135,18 @@ function renderBlock(b: Block, big = false): string {
   }
 }
 
+function presence(label: string, names: string[], bold: boolean): string {
+  if (!names.length) return '';
+  const list = names.map(plain).join(' · ');
+  return `<div class="who">${label} : ${bold ? `<b>${list}</b>` : list}</div>`;
+}
+
 export function renderHtml(cr: CompteRendu): string {
   const cat = resolveCategory(cr.categorie);
   const subtitle = cr.sous_titre ?? cat.defaultSubtitle;
   const date = formatDate(cr.date);
   const participants = (cr.participants ?? []).filter(Boolean);
+  const absents = (cr.absents ?? []).filter(Boolean);
   const blocks = (cr.blocs ?? []).filter(hasContent);
   const keep = (cr.a_retenir ?? []).slice(0, 3);
 
@@ -193,15 +200,20 @@ section{margin-top:5mm}
 .cover{background:var(--dark);padding:8mm 10mm 7mm;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:6mm}
 .cover .eyebrow{color:var(--cat);filter:brightness(1.35)}
 .cover .date{color:#D9CBB8;font-size:9.5pt;margin-top:2mm}
-.cover .date b{color:#fff}
+.cover .who{color:#D9CBB8;font-size:9pt;margin-top:.8mm}
+.cover .who b{color:#fff}
 .rings{position:absolute;right:30mm;top:-30mm;width:70mm;height:70mm;border-radius:50%;border:0.3mm solid rgba(255,255,255,.07);box-shadow:0 0 0 6mm rgba(255,255,255,0),0 0 0 6.3mm rgba(255,255,255,.06),0 0 0 12mm rgba(255,255,255,0),0 0 0 12.3mm rgba(255,255,255,.05)}
 .badge{position:relative;flex:none;display:flex;align-items:center;gap:2.6mm;border-radius:10mm;padding:2mm 4.4mm 2mm 2.4mm;color:#fff;background:var(--cat)}
 .badge .dot{width:8mm;height:8mm;border-radius:50%;background:rgba(255,255,255,.18);display:grid;place-items:center}
 .badge .dot svg{width:4.6mm;height:4.6mm;stroke:#fff;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .badge b{display:block;font-family:Caladea,serif;font-size:11.5pt;line-height:1.1}
 .badge span{font-size:7.5pt;letter-spacing:.08em;text-transform:uppercase;opacity:.85}
+/* contenu sous le bandeau : réduit par render.ts (--fit < 1) s'il dépasse une page ; marges latérales compensées */
+.fit{zoom:var(--fit,1)}
+.fit .tag{font-size:max(6.8pt,calc(6pt / var(--fit,1)))}
+.fit .eyebrow{font-size:max(7pt,calc(6pt / var(--fit,1)))}
 /* à retenir + bilan */
-.top{display:grid;gap:6mm;padding:7mm 10mm 0;align-items:start}
+.top{display:grid;gap:6mm;padding:7mm calc(10mm / var(--fit,1)) 0;align-items:start}
 .top section{margin-top:0}
 .keep{background:var(--card);border-radius:2.2mm;padding:4mm 4.2mm}
 .keep .eyebrow{margin-bottom:2.6mm;display:flex;align-items:center;gap:1.8mm}
@@ -213,7 +225,7 @@ ul.dots{list-style:none;display:grid;gap:2mm}
 ul.dots li{padding-left:4mm;position:relative}
 ul.dots li::before{content:"";position:absolute;left:.6mm;top:2.1mm;width:1.4mm;height:1.4mm;border-radius:50%;background:var(--rust)}
 /* corps */
-.body{padding:0 10mm}
+.body{padding:0 calc(10mm / var(--fit,1))}
 .body>section:first-child{margin-top:7mm}
 .inter{margin-top:7mm;border-top:0.4mm solid var(--line);padding-top:5mm}
 .inter+section{margin-top:0}
@@ -257,14 +269,17 @@ ${iconSymbols()}
     <div>
       <div class="eyebrow">${plain(cat.label)} · ${plain(subtitle)}</div>
       <h1>${plain(cr.titre)}</h1>
-      <div class="date">${escapeHtml(date)}${participants.length ? ' · <b>' + participants.map(plain).join(' · ') + '</b>' : ''}</div>
+      <div class="date">${escapeHtml(date)}</div>
+      ${presence('Présents', participants, true)}${presence('Absents', absents, false)}
     </div>
     <div class="badge"><div class="dot"><svg><use href="#${cat.picto}"/></svg></div><div><b>${plain(cat.label)}</b><span>${plain(subtitle)}</span></div></div>
   </div>
+  <div class="fit">
   ${top}
   <div class="body">
     ${blocks.map((b) => renderBlock(b)).join('\n    ')}
     ${confirm}
+  </div>
   </div>
   <div class="foot"><span>${footLeft}</span><span>${escapeHtml(date)}</span></div>
 </div>

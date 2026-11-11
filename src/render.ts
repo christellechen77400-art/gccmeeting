@@ -4,13 +4,16 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { chromium } from 'playwright';
+import { chromium, type Page } from 'playwright';
 import { CATEGORIES } from './categories.ts';
 import { renderHtml } from './template.ts';
 import type { CompteRendu } from './types.ts';
 
 const A4_WIDTH_PX = 794; // 210 mm à 96 dpi
 const A4_HEIGHT_PX = 1123; // 297 mm à 96 dpi
+// Réduction du contenu (texte et espacements) par pas de 2,5 % pour tenir sur une page.
+// Minimum 80 % : texte des cartes à 7,7 pt, petites capitales jamais sous 6 pt (voir .fit dans template.ts).
+const FIT_SCALES = [1, 0.975, 0.95, 0.925, 0.9, 0.875, 0.85, 0.825, 0.8];
 
 export function parseCompteRendu(raw: string): CompteRendu {
   const cr = JSON.parse(raw) as CompteRendu;
@@ -20,6 +23,20 @@ export function parseCompteRendu(raw: string): CompteRendu {
     throw new Error(`Catégorie inconnue : « ${cr.categorie} ». Valeurs possibles : ${Object.keys(CATEGORIES).join(', ')}.`);
   }
   return cr;
+}
+
+// Essaie des tailles de plus en plus petites ; renvoie celle qui tient sur une page,
+// ou 0 (taille normale remise) si même la plus petite dépasse.
+async function fitToOnePage(page: Page): Promise<number> {
+  for (const scale of FIT_SCALES) {
+    const height = await page.evaluate((k) => {
+      document.documentElement.style.setProperty('--fit', String(k));
+      return document.querySelector('.page')!.scrollHeight;
+    }, scale);
+    if (height <= A4_HEIGHT_PX + 1) return scale;
+  }
+  await page.evaluate(() => document.documentElement.style.removeProperty('--fit'));
+  return 0;
 }
 
 export async function render(jsonPath: string, outDir = 'out'): Promise<{ pdf: string; png: string }> {
@@ -39,9 +56,11 @@ export async function render(jsonPath: string, outDir = 'out'): Promise<{ pdf: s
     await page.setContent(renderHtml(cr), { waitUntil: 'load' });
     await page.evaluate(() => document.fonts.ready);
 
-    const height = await page.evaluate(() => document.querySelector('.page')!.scrollHeight);
-    if (height > A4_HEIGHT_PX + 1) {
-      console.warn(`Attention : le compte-rendu dépasse une page A4 (${height} px pour ${A4_HEIGHT_PX}).`);
+    const fit = await fitToOnePage(page);
+    if (fit && fit < 1) console.log(`Réduit à ${Math.round(fit * 100)} % pour tenir sur une page.`);
+    if (!fit) {
+      const height = await page.evaluate(() => document.querySelector('.page')!.scrollHeight);
+      console.warn(`Attention : le compte-rendu reste sur 2 pages, même réduit à ${Math.round(FIT_SCALES.at(-1)! * 100)} % (${height} px pour ${A4_HEIGHT_PX} à 100 %).`);
     }
 
     await page.screenshot({ path: png, fullPage: true });

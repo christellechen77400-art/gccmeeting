@@ -39,7 +39,8 @@ export interface PointARetenir {
 export interface CompteRendu {
   titre: string;
   date: string; // AAAA-MM-JJ ou AAAA-MM
-  participants?: string[];
+  participants?: string[]; // présents : membres du groupe moins les absents (pas devinés par l'IA)
+  absents?: string[]; // ajout : retirés du groupe par une ligne « Absents : … » en tête des notes
   categorie?: string; // ajout : vient du sous-dossier Drive (GCC, Culte Franco, EDD, DA, Campus GCC, Autre)
   sous_titre?: string; // ajout : sous-titre de la catégorie (sinon celui par défaut)
   a_retenir?: PointARetenir[];

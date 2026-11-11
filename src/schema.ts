@@ -1,6 +1,7 @@
 // Schéma du JSON demandé à l'IA (docs/SPEC.md §4), utilisé pour l'outil enregistrer_compte_rendu
 // et pour valider la réponse avant le rendu.
 // `categorie` et `sous_titre` (racine) ne sont pas demandés à l'IA : ils viennent du dossier Drive.
+// `participants` et `absents` non plus : ils viennent du groupe (config/groupes.json), voir participants.ts.
 
 import { z } from 'zod';
 import { ICONS } from './icons.ts';
@@ -30,7 +31,6 @@ const block = z.object({
 export const AiCompteRenduSchema = z.object({
   titre: z.string(),
   date: z.string(),
-  participants: z.array(z.string()),
   a_retenir: z.array(z.object({
     titre: z.string(),
     detail: z.string().optional(),
@@ -61,4 +61,8 @@ export const COMPTE_RENDU_TOOL = {
 };
 
 // Contrôle à la compilation : la sortie de l'IA est bien un CompteRendu affichable.
-export const toCompteRendu = (ai: AiCompteRendu, categorie: string): CompteRendu => ({ ...ai, categorie });
+export const toCompteRendu = (
+  ai: AiCompteRendu,
+  categorie: string,
+  presence: { participants: string[]; absents: string[] },
+): CompteRendu => ({ ...ai, ...presence, categorie });

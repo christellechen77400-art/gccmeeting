@@ -1,4 +1,4 @@
-// Usage : npm run cr -- <fichier> --categorie "<Catégorie>"
+// Usage : npm run cr -- <fichier> --categorie "<Catégorie>" [--groupe "<Groupe>"]
 // Notes (.txt, .md, .pdf, .docx) → IA (API compatible Anthropic, DeepSeek deepseek-v4-pro par défaut) → out/<nom>.json → out/<nom>.pdf + out/<nom>.png
 
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
@@ -8,11 +8,14 @@ import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import { CATEGORIES } from './categories.ts';
 import { extractTextFromFile } from './extract.ts';
+import { extractAbsents, loadGroups, resolveGroup, splitPresence } from './participants.ts';
+import { applyReplacements, checkCompteRendu } from './postprocess.ts';
 import { render } from './render.ts';
 import { AiCompteRenduSchema, COMPTE_RENDU_TOOL, TOOL_NAME, toCompteRendu, type AiCompteRendu } from './schema.ts';
 
 const DEFAULT_MODEL = 'deepseek-v4-pro';
 const PROMPT_PATH = new URL('./prompt.md', import.meta.url);
+const TEMPERATURE = 0.2; // basse : des comptes-rendus plus réguliers d'un essai à l'autre
 
 function parisDate(d: Date): string {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris' }).format(d); // AAAA-MM-JJ
@@ -33,15 +36,18 @@ async function askModel(text: string, categorie: string, depositDate: string): P
   }];
 
   for (let attempt = 1; ; attempt++) {
-    const response = await client.messages.create({
+    // `temperature` n'est plus dans l'API Anthropic ni dans le SDK, mais DeepSeek la prend en compte.
+    const params: Anthropic.MessageCreateParamsNonStreaming & { temperature: number } = {
       model,
       max_tokens: 16000,
+      temperature: TEMPERATURE,
       system,
       messages,
       tools: [COMPTE_RENDU_TOOL],
       tool_choice: { type: 'tool', name: TOOL_NAME },
       thinking: { type: 'disabled' },
-    });
+    };
+    const response = await client.messages.create(params);
     if (response.stop_reason === 'refusal') throw new Error('Le modèle a refusé de traiter ces notes.');
     if (response.stop_reason === 'max_tokens') throw new Error('Réponse du modèle coupée (trop longue).');
     const cached = response.usage.cache_read_input_tokens ?? 0;
@@ -78,21 +84,32 @@ function explainApiError(err: unknown): Error {
 async function main() {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
-    options: { categorie: { type: 'string' } },
+    options: { categorie: { type: 'string' }, groupe: { type: 'string' } },
   });
   const file = positionals[0];
   const categorie = values.categorie;
   if (!file || !categorie) {
-    throw new Error('Usage : npm run cr -- <fichier> --categorie "<Catégorie>"');
+    throw new Error('Usage : npm run cr -- <fichier> --categorie "<Catégorie>" [--groupe "<Groupe>"]');
   }
   if (!CATEGORIES[categorie]) {
     throw new Error(`Catégorie inconnue : « ${categorie} ». Valeurs possibles : ${Object.keys(CATEGORIES).join(', ')}.`);
   }
   if (!existsSync(file)) throw new Error(`Fichier introuvable : ${file}`);
+  const groups = loadGroups();
+  const groupe = resolveGroup(groups, file, values.groupe);
   if (existsSync('.env')) process.loadEnvFile('.env');
 
-  const text = await extractTextFromFile(file);
+  const extracted = extractAbsents(await extractTextFromFile(file));
+  const text = extracted.text;
   console.log(`Texte extrait : ${text.length} caractères.`);
+
+  // Présents = membres du groupe moins les absents ; sans groupe, pas de participants.
+  const presence = groupe
+    ? splitPresence(groups[groupe], extracted.names)
+    : { participants: [], absents: [], unknown: extracted.names };
+  if (groupe) console.log(`Groupe ${groupe} : ${presence.participants.length} présents, ${presence.absents.length} absents.`);
+  else console.log('Pas de groupe (--groupe ou dossier du fichier) : pas de participants.');
+  if (groupe && !groups[groupe].length) console.warn(`Attention : le groupe « ${groupe} » est vide dans config/groupes.json.`);
 
   let ai: AiCompteRendu;
   try {
@@ -100,13 +117,13 @@ async function main() {
   } catch (err) {
     throw explainApiError(err);
   }
-  if (ai.a_retenir.length > 3) {
-    console.warn(`Attention : ${ai.a_retenir.length} points dans « À retenir », seuls les 3 premiers sont affichés.`);
-  }
+  ai = applyReplacements(ai);
+  for (const name of presence.unknown) ai.a_confirmer.push(`Absent non reconnu dans le groupe : ${name}`);
+  for (const warning of checkCompteRendu(ai)) console.warn(`Contrôle : ${warning}`);
 
   mkdirSync('out', { recursive: true });
   const jsonPath = join('out', `${basename(file, extname(file))}.json`);
-  writeFileSync(jsonPath, JSON.stringify(toCompteRendu(ai, categorie), null, 2) + '\n', 'utf-8');
+  writeFileSync(jsonPath, JSON.stringify(toCompteRendu(ai, categorie, { participants: presence.participants, absents: presence.absents }), null, 2) + '\n', 'utf-8');
   console.log(`JSON : ${jsonPath}`);
 
   const { pdf, png } = await render(jsonPath);
