@@ -74,7 +74,7 @@ Champs ajoutés pour la mise en page (validés le 10/11/2026), tous optionnels :
 - Bloc `intertitre` : séparateur de partie, `titre` en grand (ex. « 2027 ») et `sous_titre` à côté ; pas d'éléments.
 - Dans les textes, `**…**` met en gras.
 - Après la réponse de l'IA, les remplacements de `src/remplacements.json` s'appliquent aux mots entiers (ex. « Gao » → « 高班 », « Davidson » → « David S. »).
-- Une page : au plus 3 points « À retenir », 4 éléments par bloc et 25 mots par texte (demandés à l'IA, signalés dans la console s'ils sont dépassés). Si le compte-rendu dépasse une page, le contenu sous le bandeau est réduit par pas de 2,5 %, jusqu'à 80 % au plus ; au-delà, il reste sur 2 pages à taille normale.
+- Une page : au plus 3 points « À retenir », 4 éléments par bloc et 25 mots par texte (demandés à l'IA, signalés dans la console s'ils sont dépassés). Si le compte-rendu dépasse une page, le contenu sous le bandeau est réduit par pas de 2,5 %, jusqu'à 80 % au plus. Si ça dépasse encore, le JSON est renvoyé une seule fois au modèle (« trop long de X %, raccourcis les textes sans supprimer aucun sujet »), puis rendu de nouveau ; s'il dépasse toujours, le PDF est sur 2 pages à taille normale. On ne limite pas le nombre de blocs et on ne descend pas sous 80 %. Le PNG est toujours une seule image en hauteur, sans coupure de page.
 
 Règles données à l'IA : 3 points maximum dans « À retenir », phrases courtes, ne rien inventer, écrire « à confirmer » si un nom, une date ou une décision est incertain, utiliser la liste des membres pour corriger l'orthographe des noms.
 

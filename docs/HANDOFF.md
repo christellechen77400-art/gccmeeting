@@ -2,6 +2,37 @@
 
 À mettre à jour à la fin de chaque conversation (Claude ou Claude Code). Le plus récent en haut.
 
+## 11/11/2026 — Claude Code, Mission 2 (suite 3) : raccourcissement, annuaire complété
+**Fait** (branche `mission-2-ia`, **pas fusionnée dans `main`**)
+- **Une page**, sans limite du nombre de blocs ni réduction sous 80 % (choix de Christelle) :
+  - `render` mesure de combien le compte-rendu dépasse une page à 80 % (`overflow`, en %) ;
+  - si ça dépasse, `npm run cr` renvoie la réponse au modèle **une seule fois**, dans la même conversation : « Trop long de X %… Raccourcis les textes sans supprimer aucun sujet » ; puis remplacements, contrôles, JSON et rendu de nouveau ;
+  - si la version raccourcie a moins d'éléments que la première, c'est signalé (« vérifier qu'aucun sujet n'a disparu ») ;
+  - s'il dépasse toujours : PDF sur 2 pages. Le PNG est toujours une seule image en hauteur (déjà le cas, maintenant vérifié par un test).
+- **Annuaire** : 59 personnes, avec les 5 noms cités par Christelle pour les groupes Paix, Fidélité et Bonté (Cyliane D., Mina C., Claire L., Cyrick D., Valérie W.).
+  - L'onglet Membres_Groupes complet n'était pas disponible (pas dans les Téléchargements ; le Google Drive connecté est un autre compte) : les autres membres de ces groupes restent à ajouter.
+  - « Isabelle » (EDD) : toujours à confirmer, pas ajoutée.
+- MAJxx.TXT : remplacé par ce journal (choix de Christelle).
+- Tests : `npm test` → 22 tests OK (nouveau : dépassement mesuré, PNG en une image) ; `npm run typecheck` → sans erreur.
+
+**Essais `deepseek-flash`** (11/11/2026 après-midi, température 0,2, PNG dans `essais/`)
+
+| | GCC 4/10 (« Coordination Franco ») | Musiciens |
+|---|---|---|
+| Jetons entrée / sortie | 3 533 / 955 | 4 068 / 1 222, puis 5 360 / 1 161 |
+| Raccourcissement | pas nécessaire | oui : 13 % de trop, puis encore 7 % |
+| Résultat | **1 page** (réduit à 85 %) | **2 pages** (PNG en une image) |
+| Présents / absents | 3 / 0 | 10 / 0 |
+| Fidélité | règle de service, 高班, question « nouveaux musiciens ? » avec les 6 noms : justes. **Groupe Bonté oublié.** | objectif commun, nouveautés dans l'ordre, David S. en mars 2027, « À retenir » : justes. « Groupes fixes » à la fois dans nouveautés et décisions. |
+
+- Le raccourcissement fonctionne, mais le modèle raccourcit peu (61 jetons de moins) : sur les notes musiciens, ça ne suffit pas.
+- `essais/gcc-v4-pro.png` et `essais/musiciens-v4-pro.png` sont les essais `deepseek-v4-pro` précédents (pas relancés).
+
+**À valider par Christelle**
+- Musiciens reste sur 2 pages : accepter, ou demander au modèle un pourcentage plus fort que le dépassement mesuré (le bandeau ne rétrécit pas, donc il faut couper plus que X %).
+- Le reste de l'onglet Membres_Groupes (export PDF dans les Téléchargements, par exemple) et « Isabelle ».
+- La liste des membres de `src/prompt.md` (12 noms) pourrait être tirée de l'annuaire, pour que l'IA retrouve aussi les initiales des autres personnes.
+
 ## 11/11/2026 — Claude Code, Mission 2 (suite 2) : flash par défaut, annuaire, essais
 **Fait** (branche `mission-2-ia`, poussée, **pas fusionnée dans `main`**)
 - **Modèle par défaut `deepseek-flash`** (choix de Christelle) : `src/cr.ts`, SPEC §1 et §3, DECISIONS. `deepseek-v4-pro` reste en option (`ANTHROPIC_MODEL`).

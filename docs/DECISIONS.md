@@ -22,3 +22,5 @@
 | 11/11/2026 | Modèle `deepseek-flash` par défaut, `deepseek-v4-pro` en option | Choix de Christelle après le comparatif à température 0,2 : `deepseek-flash` plus fidèle aux notes, tient sur une page, plus rapide |
 | 11/11/2026 | Groupe « Coordination Franco » (Jonathan Z., Stéphane Z., Christelle C.) : c'est le groupe de la réunion GCC du 4/10 | Indiqué par Christelle |
 | 11/11/2026 | Annuaire `config/annuaire.json` (personnes de l'organigramme) ; les groupes n'y prennent que des noms de l'annuaire, un nom inconnu est signalé mais accepté ; annuaire, groupes et présences modifiables depuis l'interface (SPEC §2) | Demandé par Christelle : rien de figé |
+| 11/11/2026 | Une page : ni limite du nombre de blocs ni réduction sous 80 % ; si ça dépasse même à 80 %, le modèle raccourcit ses textes une seule fois (« trop long de X % »), sinon PDF sur 2 pages ; PNG toujours en une seule image | Choix de Christelle |
+| 11/11/2026 | Annuaire complété avec les membres des groupes Paix, Fidélité, Bonté cités par Christelle (Cyliane D., Mina C., Claire L., Cyrick D., Valérie W.) ; MAJxx.TXT remplacé par HANDOFF.md | Choix de Christelle |
