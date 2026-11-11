@@ -2,6 +2,58 @@
 
 À mettre à jour à la fin de chaque conversation (Claude ou Claude Code). Le plus récent en haut.
 
+## 11/11/2026 — Claude Code, Mission 2 (suite) : participants, une page, comparatif des modèles
+**Fait** (branche `mission-2-ia`, poussée, **pas fusionnée dans `main`**)
+- **Participants sans l'IA** (`src/participants.ts`, `config/groupes.json`) :
+  - le groupe vient de `--groupe "<Groupe>"` ou du dossier du fichier (ex. `…/Culte Franco/Musiciens/notes.txt`) ;
+  - tous les membres sont présents, sauf ceux de la ligne « Absents : … » (dans les 3 premières lignes des notes, ou au début d'une transcription) ;
+  - un absent est reconnu par son prénom ou son nom complet, sans tenir compte des accents ; un nom non reconnu va dans « À confirmer » ;
+  - bandeau : « Présents : … » (en gras), puis « Absents : … » ; sans groupe, rien.
+- **Groupes**, remplis à la main d'après `[2026 QG] Planning - ORGANIGRAMME.pdf` (Téléchargements de Christelle, 11/11/2026 ; le PDF n'est pas copié dans le dépôt) :
+  - « Comité Orga » = TEAM ORGA, coordination générale (9 personnes) ;
+  - « Comité Franco » = COMITÉ FRANCO (7 personnes), ajouté parce que « Comité Orga » pouvait désigner l'un ou l'autre ;
+  - « Musiciens » = instrumentistes de la TEAM LOUANGE : pianistes, guitaristes, batteurs (10 personnes, dont Maëlice D. « en essai »).
+- **Remplacements fixes** après l'IA (`src/remplacements.json`, mots entiers) : « Gao » → « 高班 », « Davidson » → « David S. ».
+- **Contrôles** (`src/postprocess.ts`), signalés dans la console : mois sans année (avec l'année probable d'après la date de réunion), plus de 4 éléments par bloc, plus de 25 mots par texte, plus de 3 points « À retenir ».
+- **Une page** (`src/render.ts`, `.fit` dans `src/template.ts`) : si le compte-rendu dépasse, le contenu sous le bandeau est réduit par pas de 2,5 %, jusqu'à 80 % au plus.
+  - À 80 %, le texte des cartes est à 7,7 pt ; les petites capitales et étiquettes ne descendent pas sous 6 pt.
+  - Au-delà, le compte-rendu reste sur 2 pages à taille normale.
+  - Les marges latérales sont compensées pour rester alignées avec le bandeau.
+  - L'exemple musiciens de la mission 1 est inchangé au pixel près.
+- **Consigne** : limites strictes (3 / 4 / 25 mots), année toujours écrite avec un mois ; tout ce qui concernait les participants est retiré.
+- **Température 0,2.** Elle n'existe plus dans l'API Anthropic ni dans le SDK, mais DeepSeek la lit bien : 5 est refusé (« valid range [0, 2] »), 0,2 est accepté.
+- Tests : `npm test` → 20 tests OK ; `npm run typecheck` → sans erreur.
+
+**Comparatif `deepseek-flash` / `deepseek-v4-pro`** (11/11/2026, un essai par cas, température 0,2)
+- GCC : `--groupe "Comité Orga"`, avec la ligne « Absents : Paul, Karémy, Charlie, Lorenzo, Éloïse, Daniela » ajoutée en tête d'une copie des notes.
+- Musiciens : `--groupe Musiciens`, sans absents.
+
+| | GCC flash | GCC v4-pro | Musiciens flash | Musiciens v4-pro |
+|---|---|---|---|---|
+| Jetons entrée / sortie | 3 533 / 932 | 3 544 / 1 080 | 4 068 / 957 | 4 079 / 1 110 |
+| Durée | 9 s | 13 s | 8 s | 14 s |
+| JSON valide du premier coup | oui | oui | oui | oui |
+| Pages | **1 (82,5 %)** | 2 | **1 (82,5 %)** | 2 |
+| Blocs | 6 | 9 | 6 | 7 |
+| Présents / absents | 3 / 6 | 3 / 6 | 10 / 0 | 10 / 0 |
+| Question « nouveaux musiciens ? » gardée en question | oui, avec les 6 noms | oui, mais **sans les noms** (mélangée avec l'âge minimum) | — | — |
+| Groupe Bonté | oui | **non** | — | — |
+| 高班 | oui | oui | — | — |
+| Règle de service juste | oui | oui | — | — |
+| Objectifs par instrument hors du bilan | — | — | oui | **non** (aussi dans le bilan) |
+| Nouveautés dans l'ordre demandé | — | — | oui | oui |
+| « À retenir » conforme | — | — | oui | oui |
+| Mois sans année signalés | 0 | 0 | 0 | 1 (« décembre ») |
+
+- Sur ces essais, `deepseek-flash` fait mieux que `v4-pro` : plus court (donc 1 page), plus fidèle, et environ 1,5 fois plus rapide.
+- Les essais du 10/11 (sans température basse ni les nouvelles règles) donnaient l'avantage à `v4-pro`.
+- Avec un seul essai par cas, la différence n'est pas sûre : à confirmer sur d'autres notes avant de changer le modèle par défaut.
+
+**À valider par Christelle**
+- La composition des groupes, en particulier le sens de « Comité Orga ».
+- Le minimum de 80 % : est-ce lisible sur papier ?
+- Le modèle par défaut : `deepseek-v4-pro` (choix du 11/11) ou retour à `deepseek-flash` d'après ce comparatif.
+
 ## 10/11/2026 — Claude Code, Mission 2 (notes → compte-rendu avec l'IA)
 **Fait** (branche `mission-2-ia`, poussée, **pas fusionnée dans `main`**)
 - `npm run cr -- <fichier> --categorie "<Catégorie>"` :

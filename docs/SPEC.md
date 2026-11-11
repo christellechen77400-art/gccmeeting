@@ -60,11 +60,17 @@ Le détail des écrans sera fixé dans l'artefact UI/UX.
 Champs ajoutés pour la mise en page (validés le 10/11/2026), tous optionnels :
 - `categorie` : `GCC`, `Culte Franco`, `EDD`, `DA`, `Campus GCC` ou `Autre` (par défaut `Autre`). Rempli par l'application d'après le sous-dossier Drive, pas par l'IA.
 - `sous_titre` (racine) : sous-titre de la catégorie dans le bandeau ; sinon celui par défaut (`docs/TEMPLATE.md`).
+- `participants` et `absents` (ajout du 11/11/2026) : remplis par l'application, **pas par l'IA**.
+  - Les membres du groupe viennent de `config/groupes.json` ; le groupe vient du sous-dossier (ex. `Culte Franco/Musiciens`) ou de l'option `--groupe`.
+  - Tous les membres sont présents par défaut. Une ligne « Absents : … » en tête des notes, ou une phrase « absents : … » au début d'une transcription, les retire.
+  - Bandeau : « Présents : … » (en gras) et « Absents : … ». Sans groupe : ni présents ni absents.
 - `picto` : nom d'un picto de `src/icons.ts` (sur un point « À retenir », un bloc ou un élément) ; sinon le picto par défaut du bloc.
 - `date` : `AAAA-MM-JJ`, ou `AAAA-MM` si le jour n'est pas connu (affiché « Novembre 2026 »).
 - Bloc `objectif` : `sous_titre` (petit texte au-dessus du titre), `texte` (paragraphe), `titre_etapes` (titre des étapes numérotées) ; les `elements` sont les étapes.
 - Bloc `intertitre` : séparateur de partie, `titre` en grand (ex. « 2027 ») et `sous_titre` à côté ; pas d'éléments.
 - Dans les textes, `**…**` met en gras.
+- Après la réponse de l'IA, les remplacements de `src/remplacements.json` s'appliquent aux mots entiers (ex. « Gao » → « 高班 », « Davidson » → « David S. »).
+- Une page : au plus 3 points « À retenir », 4 éléments par bloc et 25 mots par texte (demandés à l'IA, signalés dans la console s'ils sont dépassés). Si le compte-rendu dépasse une page, le contenu sous le bandeau est réduit par pas de 2,5 %, jusqu'à 80 % au plus ; au-delà, il reste sur 2 pages à taille normale.
 
 Règles données à l'IA : 3 points maximum dans « À retenir », phrases courtes, ne rien inventer, écrire « à confirmer » si un nom, une date ou une décision est incertain, utiliser la liste des membres pour corriger l'orthographe des noms.
 
@@ -73,7 +79,7 @@ Règles données à l'IA : 3 points maximum dans « À retenir », phrases court
 - **EDD** : école du dimanche, classes 中班, 大班, 高班 (« Gao »).
 - Groupes : **Paix**, **Fidélité**, **Bonté**. **Teams fixes** : groupes de louange fixes par trimestre.
 - **MD** : directeur musical. **Régie** : son, PPT. **DA** : direction artistique. **Campus GCC** : campus de l'église.
-- Noms : format « Prénom + initiale. » (ex. « David S. »). Liste des membres : onglet ORGANIGRAMME du Google Sheets « [2026 QG] Planning » (à brancher plus tard).
+- Noms : format « Prénom + initiale. » (ex. « David S. »). Liste des membres : onglet ORGANIGRAMME du Google Sheets « [2026 QG] Planning ». Les groupes de `config/groupes.json` ont été remplis à la main d'après l'export PDF du 11/11/2026 (lecture automatique à brancher plus tard).
 
 ## 6. Hors périmètre pour l'instant
 - Intégration au site GCC.
