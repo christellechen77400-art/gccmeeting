@@ -15,3 +15,4 @@
 | 10/11/2026 | Participants d'accord pour l'enregistrement ; audios gardés tant qu'il y a de la place | Validé par Christelle |
 | 10/11/2026 | Liste de 12 membres écrite dans `src/prompt.md` en attendant l'onglet ORGANIGRAMME | Sans elle, l'IA ne peut pas deviner les initiales (« jo » → Jonathan Z.) ; validé par Christelle |
 | 10/11/2026 | DeepSeek retenu à la place de Claude (choix de Christelle, 10/11/2026) : API compatible Anthropic, `deepseek-flash` par défaut, `deepseek-v4-pro` en option | Choix de Christelle. Remplace la ligne « Résumé : Claude Haiku… » et sa raison « pas de modèle chinois (données de l'église) » |
+| 11/11/2026 | Modèle `deepseek-v4-pro` par défaut, `deepseek-flash` en option | Choix de Christelle après les essais : `deepseek-v4-pro` respecte mieux les notes (questions gardées en questions, glossaire) |

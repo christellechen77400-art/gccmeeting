@@ -11,7 +11,7 @@
 - **IA : DeepSeek** à la place de Claude (choix de Christelle, voir `docs/DECISIONS.md`) :
   - SDK officiel `@anthropic-ai/sdk`, pointé vers l'API compatible Anthropic de DeepSeek ;
   - `.env` : `ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic`, `ANTHROPIC_API_KEY` (clé DeepSeek), `ANTHROPIC_MODEL` ;
-  - modèle `deepseek-flash` par défaut, `deepseek-v4-pro` en option.
+  - modèle `deepseek-v4-pro` par défaut (choix de Christelle le 11/11/2026), `deepseek-flash` en option.
 - DeepSeek ne gère pas la sortie structurée. L'IA répond donc en appelant l'outil `enregistrer_compte_rendu` :
   - son `input_schema` est le format SPEC §4, généré depuis le schéma zod (`src/schema.ts`) ;
   - pas de champ `type` dans l'outil (DeepSeek renvoie une erreur 422) ;
@@ -95,9 +95,45 @@ Même notes GCC avec `deepseek-v4-pro` (essai rapide) :
 - `categorie` et `sous_titre` ne sont pas demandés à l'IA : ils viennent de la commande (plus tard, du dossier Drive).
 - Les fichiers `out/` ne sont pas commités.
 
+**Ajustements après les essais (11/11/2026, `deepseek-v4-pro`)**
+- Changements dans `src/prompt.md`, contre les erreurs relevées :
+  - une question reste une question, même suivie d'une liste de noms ;
+  - ne rien oublier (noms de groupe dans les titres des notes) ;
+  - ne rien préciser ni élargir ;
+  - les lignes de correction ne font pas de leur auteur un participant ;
+  - une personne seulement mentionnée n'est pas un participant ;
+  - gras plus limité ;
+  - les objectifs ne vont jamais dans le bilan ;
+  - pas de répétition dans « Prochaines étapes » ;
+  - `tags` et « À confirmer » limités ;
+  - glossaire : « Gao » s'écrit toujours 高班, et la notion de règle de service est ajoutée.
+- `src/schema.ts` refuse :
+  - un bloc de cartes sans `elements` : le modèle mettait parfois le contenu dans `texte`, que la page n'affiche pas, et le contenu disparaissait ;
+  - une réponse sans aucun bloc de contenu (vu 2 fois : réponse coupée après un intertitre).
+
+  Dans les deux cas, le nouvel essai automatique renvoie l'erreur au modèle. Ce mécanisme a servi une fois pendant les essais, avec succès.
+- Mesuré sur 4 essais GCC avec la consigne finale (3 essais d'atelier et 1 essai officiel) :
+
+  | Point | Résultat |
+  |---|---|
+  | Question gardée en question | 4/4 |
+  | Règle de service juste | 4/4 |
+  | Bonté présent | 3/4 |
+  | 高班 au lieu de « Gao » | 3/4 |
+
+- Musiciens, essai officiel : même structure que la référence (bilan, 2027, objectif, objectifs par instrument, nouveautés). Pas de participant inventé, « À retenir » conforme.
+- **Restent** :
+  - Les deux comptes-rendus font **2 pages** (1490 et 1457 px pour 1123). La référence GCC tient sur 1 page parce qu'elle regroupe beaucoup plus.
+  - Dans l'essai officiel GCC, Delphine Z. est ajoutée aux participants alors qu'elle n'est que citée, et « EDD Gao » n'est pas converti.
+  - Dans l'essai officiel musiciens, les étapes de l'atelier sont dans une carte à part au lieu du bloc objectif, et le MD est répété.
+  - L'année n'est jamais ajoutée aux mois (« mars » au lieu de « mars 2027 »).
+  - Les réponses varient d'un essai à l'autre : il faut relire chaque compte-rendu.
+- Risque de surapprentissage : la consigne a été ajustée sur ces deux réunions. À vérifier sur de nouvelles notes.
+- **Christelle doit modifier `.env`** (`ANTHROPIC_MODEL=deepseek-v4-pro`), sinon `deepseek-flash` reste utilisé. `.env.example` est aussi à refaire (voir plus haut).
+
 **Ensuite** :
-1. Christelle choisit entre `deepseek-flash` et `deepseek-v4-pro`.
-2. Ajuster `src/prompt.md` selon les écarts ci-dessus.
+1. Essayer sur de nouvelles notes.
+2. Décider si 2 pages sont acceptables, ou s'il faut resserrer le modèle de page ou la consigne.
 3. Valider la mission 2 avant de fusionner.
 
 ## 10/11/2026 — Claude Code, Mission 1 (suite) : validation et fusion
