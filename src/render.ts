@@ -26,20 +26,22 @@ export function parseCompteRendu(raw: string): CompteRendu {
 }
 
 // Essaie des tailles de plus en plus petites ; renvoie celle qui tient sur une page,
-// ou 0 (taille normale remise) si même la plus petite dépasse.
-async function fitToOnePage(page: Page): Promise<number> {
+// ou 0 (taille normale remise) si même la plus petite dépasse, avec la hauteur à cette plus petite taille.
+async function fitToOnePage(page: Page): Promise<{ scale: number; height: number }> {
+  let height = 0;
   for (const scale of FIT_SCALES) {
-    const height = await page.evaluate((k) => {
+    height = await page.evaluate((k) => {
       document.documentElement.style.setProperty('--fit', String(k));
       return document.querySelector('.page')!.scrollHeight;
     }, scale);
-    if (height <= A4_HEIGHT_PX + 1) return scale;
+    if (height <= A4_HEIGHT_PX + 1) return { scale, height };
   }
   await page.evaluate(() => document.documentElement.style.removeProperty('--fit'));
-  return 0;
+  return { scale: 0, height };
 }
 
-export async function render(jsonPath: string, outDir = 'out'): Promise<{ pdf: string; png: string }> {
+// `overflow` : de combien (en %) le compte-rendu dépasse une page même réduit au minimum ; 0 s'il tient.
+export async function render(jsonPath: string, outDir = 'out'): Promise<{ pdf: string; png: string; overflow: number }> {
   if (!existsSync(jsonPath)) throw new Error(`Fichier introuvable : ${jsonPath}`);
   const cr = parseCompteRendu(readFileSync(jsonPath, 'utf-8'));
   const name = basename(jsonPath, extname(jsonPath));
@@ -47,6 +49,7 @@ export async function render(jsonPath: string, outDir = 'out'): Promise<{ pdf: s
   const pdf = join(outDir, `${name}.pdf`);
   const png = join(outDir, `${name}.png`);
 
+  let overflow = 0;
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage({
@@ -57,18 +60,19 @@ export async function render(jsonPath: string, outDir = 'out'): Promise<{ pdf: s
     await page.evaluate(() => document.fonts.ready);
 
     const fit = await fitToOnePage(page);
-    if (fit && fit < 1) console.log(`Réduit à ${Math.round(fit * 100)} % pour tenir sur une page.`);
-    if (!fit) {
-      const height = await page.evaluate(() => document.querySelector('.page')!.scrollHeight);
-      console.warn(`Attention : le compte-rendu reste sur 2 pages, même réduit à ${Math.round(FIT_SCALES.at(-1)! * 100)} % (${height} px pour ${A4_HEIGHT_PX} à 100 %).`);
+    if (fit.scale && fit.scale < 1) console.log(`Réduit à ${Math.round(fit.scale * 100)} % pour tenir sur une page.`);
+    if (!fit.scale) {
+      overflow = Math.ceil((fit.height / A4_HEIGHT_PX - 1) * 100);
+      console.warn(`Attention : le compte-rendu dépasse une page de ${overflow} %, même réduit à ${Math.round(FIT_SCALES.at(-1)! * 100)} % : PDF sur 2 pages.`);
     }
 
+    // PNG : toujours une seule image en hauteur, sans coupure de page.
     await page.screenshot({ path: png, fullPage: true });
     await page.pdf({ path: pdf, preferCSSPageSize: true, printBackground: true });
   } finally {
     await browser.close();
   }
-  return { pdf, png };
+  return { pdf, png, overflow };
 }
 
 // Lancé directement (npm run render), pas importé par un autre script.

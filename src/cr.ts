@@ -21,20 +21,28 @@ function parisDate(d: Date): string {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris' }).format(d); // AAAA-MM-JJ
 }
 
-// L'IA répond en appelant l'outil enregistrer_compte_rendu (forcé, sans réflexion).
-// JSON non conforme : un seul nouvel essai, en renvoyant l'erreur au modèle.
-async function askModel(text: string, categorie: string, depositDate: string): Promise<AiCompteRendu> {
+// Conversation avec l'IA, gardée pour pouvoir lui demander de raccourcir sa réponse.
+type Conversation = { client: Anthropic; model: string; system: string; messages: Anthropic.MessageParam[] };
+
+function startConversation(text: string, categorie: string, depositDate: string): Conversation {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error('Clé API manquante : renseigne ANTHROPIC_API_KEY dans le fichier .env (modèle : .env.example).');
   }
-  const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
-  const client = new Anthropic({ baseURL: process.env.ANTHROPIC_BASE_URL || undefined });
-  const system = readFileSync(PROMPT_PATH, 'utf-8');
-  const messages: Anthropic.MessageParam[] = [{
-    role: 'user',
-    content: `Catégorie : ${categorie}\nDate de dépôt du fichier : ${depositDate}\n\n<notes>\n${text}\n</notes>`,
-  }];
+  return {
+    client: new Anthropic({ baseURL: process.env.ANTHROPIC_BASE_URL || undefined }),
+    model: process.env.ANTHROPIC_MODEL || DEFAULT_MODEL,
+    system: readFileSync(PROMPT_PATH, 'utf-8'),
+    messages: [{
+      role: 'user',
+      content: `Catégorie : ${categorie}\nDate de dépôt du fichier : ${depositDate}\n\n<notes>\n${text}\n</notes>`,
+    }],
+  };
+}
 
+// L'IA répond en appelant l'outil enregistrer_compte_rendu (forcé, sans réflexion).
+// JSON non conforme : un seul nouvel essai, en renvoyant l'erreur au modèle.
+// La réponse retenue est ajoutée à la conversation ; `toolUseId` permet d'y répondre.
+async function askModel({ client, model, system, messages }: Conversation): Promise<{ ai: AiCompteRendu; toolUseId: string }> {
   for (let attempt = 1; ; attempt++) {
     // `temperature` n'est plus dans l'API Anthropic ni dans le SDK, mais DeepSeek la prend en compte.
     const params: Anthropic.MessageCreateParamsNonStreaming & { temperature: number } = {
@@ -55,7 +63,10 @@ async function askModel(text: string, categorie: string, depositDate: string): P
 
     const call = response.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use' && b.name === TOOL_NAME);
     const checked = AiCompteRenduSchema.safeParse(call?.input);
-    if (checked.success) return checked.data;
+    if (checked.success) {
+      messages.push({ role: 'assistant', content: response.content });
+      return { ai: checked.data, toolUseId: call!.id }; // valide, donc l'outil a bien été appelé
+    }
 
     const problem = call ? z.prettifyError(checked.error) : `pas d'appel à l'outil ${TOOL_NAME}`;
     if (attempt === 2) throw new Error(`JSON du modèle non conforme après 2 essais :\n${problem}`);
@@ -114,23 +125,49 @@ async function main() {
     console.warn(`Attention : « ${name} » (groupe ${groupe}) n'est pas dans config/annuaire.json ; gardé quand même.`);
   }
 
-  let ai: AiCompteRendu;
+  mkdirSync('out', { recursive: true });
+  const jsonPath = join('out', `${basename(file, extname(file))}.json`);
+  // Corrections par le code, contrôles, puis JSON enregistré et rendu en PDF + PNG.
+  const finish = async (answer: AiCompteRendu) => {
+    const ai = applyReplacements(answer);
+    for (const name of presence.unknown) ai.a_confirmer.push(`Absent non reconnu dans le groupe : ${name}`);
+    for (const warning of checkCompteRendu(ai)) console.warn(`Contrôle : ${warning}`);
+    writeFileSync(jsonPath, JSON.stringify(toCompteRendu(ai, categorie, { participants: presence.participants, absents: presence.absents }), null, 2) + '\n', 'utf-8');
+    console.log(`JSON : ${jsonPath}`);
+    return render(jsonPath);
+  };
+
+  const conversation = startConversation(text, categorie, parisDate(statSync(file).mtime));
   try {
-    ai = await askModel(text, categorie, parisDate(statSync(file).mtime));
+    const first = await askModel(conversation);
+    let result = await finish(first.ai);
+    // Plus d'une page même réduit au minimum : un seul essai pour raccourcir ; sinon le PDF reste sur 2 pages.
+    if (result.overflow) {
+      console.log(`Trop long de ${result.overflow} % : le modèle raccourcit les textes.`);
+      conversation.messages.push({
+        role: 'user',
+        content: [{
+          type: 'tool_result',
+          tool_use_id: first.toolUseId,
+          content: `Trop long de ${result.overflow} % pour tenir sur une page A4, même avec le texte réduit au minimum lisible. Raccourcis les textes sans supprimer aucun sujet, puis rappelle l'outil avec le compte-rendu complet.`,
+        }],
+      });
+      const shorter = await askModel(conversation);
+      const before = countElements(first.ai);
+      const after = countElements(shorter.ai);
+      if (after < before) console.warn(`Contrôle : la version raccourcie a ${after} éléments au lieu de ${before} : vérifier qu'aucun sujet n'a disparu.`);
+      result = await finish(shorter.ai);
+      if (result.overflow) console.warn('Toujours trop long après raccourcissement : PDF sur 2 pages.');
+    }
+    console.log(`PDF : ${result.pdf}\nPNG : ${result.png}`);
   } catch (err) {
     throw explainApiError(err);
   }
-  ai = applyReplacements(ai);
-  for (const name of presence.unknown) ai.a_confirmer.push(`Absent non reconnu dans le groupe : ${name}`);
-  for (const warning of checkCompteRendu(ai)) console.warn(`Contrôle : ${warning}`);
+}
 
-  mkdirSync('out', { recursive: true });
-  const jsonPath = join('out', `${basename(file, extname(file))}.json`);
-  writeFileSync(jsonPath, JSON.stringify(toCompteRendu(ai, categorie, { participants: presence.participants, absents: presence.absents }), null, 2) + '\n', 'utf-8');
-  console.log(`JSON : ${jsonPath}`);
-
-  const { pdf, png } = await render(jsonPath);
-  console.log(`PDF : ${pdf}\nPNG : ${png}`);
+// Points « À retenir », éléments des blocs et objectifs : sert à repérer un sujet supprimé en raccourcissant.
+function countElements(ai: AiCompteRendu): number {
+  return ai.a_retenir.length + ai.blocs.reduce((n, b) => n + (b.elements?.length ?? 0) + (b.type === 'objectif' ? 1 : 0), 0);
 }
 
 main().catch((err: Error) => {
