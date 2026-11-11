@@ -11,7 +11,7 @@ Statut : version 0.1 (10/11/2026). Interface (UI/UX) en cours de validation dans
 3. Selon le type de fichier :
    - **audio** (m4a, mp3, wav…) → transcription (Groq, Whisper large-v3 turbo, français) ;
    - **PDF**, **Google Doc**, **.txt** → extraction du texte.
-4. Le texte est envoyé à l'IA (DeepSeek, `deepseek-v4-pro` par défaut) avec le modèle de compte-rendu et le glossaire. L'IA renvoie un JSON structuré (voir §4).
+4. Le texte est envoyé à l'IA (DeepSeek, `deepseek-flash` par défaut) avec le modèle de compte-rendu et le glossaire. L'IA renvoie un JSON structuré (voir §4).
 5. Le JSON remplit le modèle HTML (`docs/TEMPLATE.md`) → export **PDF A4 portrait** + **PNG** (pour iPhone / WhatsApp).
 6. Les fichiers sont rangés dans `GCCMeeting/Comptes-rendus/<Catégorie>/` avec un nom `AAAA-MM-JJ_<titre>.pdf|png`.
 7. Le fichier source est déplacé dans `GCCMeeting/Traités/<Catégorie>/` (on le garde, rien n'est supprimé).
@@ -23,15 +23,19 @@ La catégorie vient du **nom du sous-dossier** : personne n'a à choisir le band
 - Suivi des fichiers : en attente / en cours / terminé / erreur (avec le message d'erreur lisible).
 - Historique des comptes-rendus par catégorie.
 - Modèle : catégories (nom, couleur, picto, sous-titre), rubriques, aperçu en direct.
-- Paramètres : dossiers Drive, modèle IA (`deepseek-v4-pro` / `deepseek-flash`), adresse mail de notification.
+- Paramètres : dossiers Drive, modèle IA (`deepseek-flash` / `deepseek-v4-pro`), adresse mail de notification.
 - Bouton « Régénérer » sur un compte-rendu.
+- **Annuaire** modifiable : ajouter, retirer, renommer une personne (format « Prénom I. »).
+- **Groupes** modifiables : créer, renommer, supprimer un groupe ; ajouter ou retirer des membres, choisis dans l'annuaire ou tapés à la main (un nom hors de l'annuaire est signalé mais accepté).
+- **Présents et absents** corrigeables pour chaque réunion, sans modifier le groupe.
+- Rien de figé : annuaire, groupes et présences se changent depuis l'interface, sans toucher au code.
 Le détail des écrans sera fixé dans l'artefact UI/UX.
 
 ## 3. Technique (proposition)
 - Application Node.js (TypeScript) hébergée sur **Google Cloud Run** (projet du compte GCC Franco), déclenchée par **Cloud Scheduler** toutes les 5 minutes.
 - Accès Drive et Gmail via l'API Google (compte GCC Franco).
 - Transcription : **Groq** (free tier ≈ 8 h d'audio / jour). Compresser l'audio (ffmpeg, mono, 16 kHz) si le fichier dépasse la limite de taille.
-- Résumé : **DeepSeek**, par son API compatible Anthropic (SDK officiel `@anthropic-ai/sdk`, adresse dans `ANTHROPIC_BASE_URL`). Modèle `deepseek-v4-pro` par défaut (plus fidèle aux notes que `deepseek-flash` lors des essais du 11/11/2026), `deepseek-flash` en option. DeepSeek ne gère pas la sortie structurée : l'IA répond en appelant un outil forcé `enregistrer_compte_rendu` (format §4), sans mode réflexion ; le JSON est validé, avec un seul nouvel essai en cas d'erreur.
+- Résumé : **DeepSeek**, par son API compatible Anthropic (SDK officiel `@anthropic-ai/sdk`, adresse dans `ANTHROPIC_BASE_URL`). Modèle `deepseek-flash` par défaut (plus fidèle et plus court que `deepseek-v4-pro` lors du comparatif du 11/11/2026, température 0,2), `deepseek-v4-pro` en option. DeepSeek ne gère pas la sortie structurée : l'IA répond en appelant un outil forcé `enregistrer_compte_rendu` (format §4), sans mode réflexion ; le JSON est validé, avec un seul nouvel essai en cas d'erreur.
 - Rendu : HTML/CSS du modèle → PDF et PNG avec Playwright (Chromium).
 - Aucun audio stocké côté application : téléchargement temporaire, puis suppression.
 - Clés dans `.env` : `ANTHROPIC_BASE_URL`, `ANTHROPIC_API_KEY` (clé DeepSeek), `ANTHROPIC_MODEL`, `GROQ_API_KEY`, identifiants Google.

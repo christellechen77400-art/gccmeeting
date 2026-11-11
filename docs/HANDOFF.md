@@ -2,6 +2,41 @@
 
 À mettre à jour à la fin de chaque conversation (Claude ou Claude Code). Le plus récent en haut.
 
+## 11/11/2026 — Claude Code, Mission 2 (suite 2) : flash par défaut, annuaire, essais
+**Fait** (branche `mission-2-ia`, poussée, **pas fusionnée dans `main`**)
+- **Modèle par défaut `deepseek-flash`** (choix de Christelle) : `src/cr.ts`, SPEC §1 et §3, DECISIONS. `deepseek-v4-pro` reste en option (`ANTHROPIC_MODEL`).
+  - `.env.example` n'a pas pu être modifié par Claude Code (fichiers `.env*` bloqués) : il contient toujours « … ». Christelle doit relancer la commande `printf` (voir le message de fin de conversation).
+- **Groupe « Coordination Franco »** : Jonathan Z., Stéphane Z., Christelle C. C'est le groupe de la réunion GCC du 4/10. Les autres groupes sont inchangés.
+- **Annuaire** `config/annuaire.json` : les 54 personnes de l'organigramme (`[2026 QG] Planning - ORGANIGRAMME.pdf`, 2 pages).
+  - Pas ajouté : « Isabelle » sans initiale (professeurs EDD), qui est peut-être Isabelle J. ; « Stéphane » (TEAM ÉVÉNEMENTIEL) compté comme Stéphane Z.
+  - `npm run cr` signale un membre de groupe absent de l'annuaire, mais le garde. Un test vérifie que tous les groupes actuels sont dans l'annuaire.
+  - La liste des membres de `src/prompt.md` (12 noms du 10/11) n'est pas reliée à l'annuaire : 5 de ses noms n'y sont pas (Cyliane D., Mina C., Claire L., Cyrick D., Valérie W.).
+- **SPEC §2** : annuaire et groupes modifiables depuis l'interface, présents et absents corrigeables pour chaque réunion sans toucher au groupe.
+- **Dossier `essais/`** : les PNG des quatre essais (`gcc-flash`, `gcc-v4-pro`, `musiciens-flash`, `musiciens-v4-pro`).
+  - Les deux PNG GCC viennent des essais relancés aujourd'hui avec « Coordination Franco », sur les notes d'origine (sans ligne « Absents »).
+  - Les deux PNG musiciens sont ceux du comparatif ci-dessous (11/11, même code).
+- Tests : `npm test` → 21 tests OK ; `npm run typecheck` → sans erreur.
+
+**Essai GCC 4/10 relancé avec « Coordination Franco »** (un essai par modèle, température 0,2)
+
+| | GCC flash | GCC v4-pro |
+|---|---|---|
+| Jetons entrée / sortie | 3 533 / 1 235 | 3 544 / 1 048 |
+| Présents / absents | 3 / 0 | 3 / 0 |
+| Pages | **2** (1 777 px pour 1 123) | **2** (1 462 px pour 1 123) |
+| Blocs | 9 | 7 |
+| Question « nouveaux musiciens ? » avec les 6 noms | oui | oui |
+| Groupe Bonté | oui, mais avec une phrase vide (« EDD avec le groupe Bonté ») | **non** |
+| 高班, règle de service | oui | oui |
+| Écarts | bilan vague (« Réunion de travail sur… ») ; noms de la prière répétés en étiquettes | Interfranco T1 (2027) mis dans le bilan ; « Mettre en place les teams fixes » ajouté aux étapes |
+
+- Cette fois, aucun des deux ne tient sur une page, même à 80 %. Ce matin, `deepseek-flash` tenait sur une page (932 jetons en sortie) ; cet après-midi, il a écrit 1 235 jetons. La longueur varie d'un essai à l'autre.
+- `deepseek-v4-pro` oublie de nouveau le groupe Bonté.
+
+**À valider par Christelle**
+- La liste de l'annuaire, en particulier « Isabelle » (EDD) et les 5 noms de la consigne absents de l'organigramme.
+- Comment garantir une page pour la réunion GCC : limites plus strictes dans la consigne (ex. 6 blocs au plus), ou plus petit que 80 %.
+
 ## 11/11/2026 — Claude Code, Mission 2 (suite) : participants, une page, comparatif des modèles
 **Fait** (branche `mission-2-ia`, poussée, **pas fusionnée dans `main`**)
 - **Participants sans l'IA** (`src/participants.ts`, `config/groupes.json`) :
