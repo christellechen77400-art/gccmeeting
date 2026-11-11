@@ -19,6 +19,12 @@ test('le schéma refuse un type de bloc ou un picto inconnu', () => {
   assert.equal(AiCompteRenduSchema.safeParse({ ...base, blocs: [{ type: 'bilan', picto: 'emoji' }] }).success, false);
 });
 
+test('le schéma refuse un compte-rendu sans bloc de contenu (intertitre seul)', () => {
+  const base = { titre: 'T', date: '2026-11', participants: [], a_retenir: [], a_confirmer: [] };
+  assert.equal(AiCompteRenduSchema.safeParse({ ...base, blocs: [{ type: 'intertitre', titre: '2027' }] }).success, false);
+  assert.equal(AiCompteRenduSchema.safeParse({ ...base, blocs: [{ type: 'bilan', elements: [{ texte: 'x' }] }] }).success, true);
+});
+
 test('l\'outil enregistrer_compte_rendu : pas de champ « type » (erreur 422 chez DeepSeek)', () => {
   assert.deepEqual(Object.keys(COMPTE_RENDU_TOOL), ['name', 'description', 'input_schema']);
   assert.equal(COMPTE_RENDU_TOOL.name, 'enregistrer_compte_rendu');

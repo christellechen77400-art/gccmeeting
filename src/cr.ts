@@ -1,5 +1,5 @@
 // Usage : npm run cr -- <fichier> --categorie "<Catégorie>"
-// Notes (.txt, .md, .pdf, .docx) → IA (API compatible Anthropic, DeepSeek par défaut) → out/<nom>.json → out/<nom>.pdf + out/<nom>.png
+// Notes (.txt, .md, .pdf, .docx) → IA (API compatible Anthropic, DeepSeek deepseek-v4-pro par défaut) → out/<nom>.json → out/<nom>.pdf + out/<nom>.png
 
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
@@ -11,7 +11,7 @@ import { extractTextFromFile } from './extract.ts';
 import { render } from './render.ts';
 import { AiCompteRenduSchema, COMPTE_RENDU_TOOL, TOOL_NAME, toCompteRendu, type AiCompteRendu } from './schema.ts';
 
-const DEFAULT_MODEL = 'deepseek-flash';
+const DEFAULT_MODEL = 'deepseek-v4-pro';
 const PROMPT_PATH = new URL('./prompt.md', import.meta.url);
 
 function parisDate(d: Date): string {

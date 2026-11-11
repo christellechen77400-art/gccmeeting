@@ -36,7 +36,15 @@ export const AiCompteRenduSchema = z.object({
     detail: z.string().optional(),
     picto: picto.optional(),
   })),
-  blocs: z.array(block),
+  // Le modèle s'arrête parfois après un intertitre, ou met le contenu d'un bloc de cartes dans `texte`,
+  // que le modèle de page n'affiche pas : ces réponses sont refusées (un nouvel essai avec l'erreur).
+  blocs: z.array(block.refine(
+    (b) => b.type === 'intertitre' || b.type === 'objectif' || (b.elements?.length ?? 0) > 0,
+    'Ce bloc n\'a aucun élément : son contenu doit être dans `elements` (une carte ou une ligne par élément), le `texte` d\'un bloc de cartes n\'est pas affiché.',
+  )).refine(
+    (blocs) => blocs.some((b) => b.type !== 'intertitre'),
+    'Aucun bloc de contenu : reprends tous les sujets des notes dans les blocs.',
+  ),
   a_confirmer: z.array(z.string()),
 });
 
