@@ -1,4 +1,25 @@
-# Modèle de compte-rendu (validé le 10/11/2026)
+# Modèle de compte-rendu
+
+> **12/11/2026 — nouvelle charte validée : la charte GCC** (celle de l'application GCC Louange).
+> Référence : `reference/exemple-cr-musiciens-charte-gcc.png` (+ `.html`, logo `reference/gcc-logo.png`).
+> Elle remplace la charte Campus ci-dessous pour les bandeaux, couleurs et polices. L'ordre des blocs et les règles de contenu restent les mêmes.
+
+## Charte GCC (en vigueur)
+- Fond de page `#f2f2f7`, cartes blanches, rayon 16 px, ombre légère `0 4px 14px rgba(28,28,30,.08)`.
+- Encre `#1c1c1e`, texte secondaire `#6c6c72`, filets `#e4e4e5`.
+- Signature en haut à gauche : logo GCC + « GCC **Meeting** », « Meeting » dans le rouge du logo `#cf2a20`.
+- Police système (SF sur Mac/iPhone) ; pour le rendu PDF/PNG : Inter (titres en Inter Display), PingFang / Noto Sans CJK pour le chinois.
+- **Couleur de la catégorie** (= couleurs de service de l'application, `src/lib/serviceColors.ts` du dépôt GCC) :
+  Culte Franco `#2d5a65` · EDD `#3b6d11` · Campus GCC `#2471a3` · GCC (coordination) `#cf2a20` · DA `#9d3c63` · Autre `#6c6c72`.
+- La couleur de catégorie sert à : point + libellé « ● Catégorie · Groupe » au-dessus du titre, halo flou en haut à gauche,
+  carte « À retenir » teintée (9 %) avec numéros en pastilles pleines, titre et puces du bilan, mot « 2027 »,
+  bloc objectif en fond plein, petite barre devant les intertitres, pictos dans un rond teinté (12 %).
+- Le reste reste neutre (gris clair, blanc, noir).
+- Participants en pastilles blanches sous le titre ; absents barrés.
+
+---
+
+# Ancienne charte (Campus), conservée pour mémoire
 
 Exemples de référence : `reference/exemple-cr-gcc.png`, `reference/exemple-cr-musiciens.png`, `reference/bandeaux.png` (+ fichiers HTML sources).
 
