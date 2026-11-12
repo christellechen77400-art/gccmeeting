@@ -19,6 +19,12 @@ test('phrase « absents : … » au début d\'une transcription : la suite du te
   assert.equal(r.text, 'Bonjour à tous, on commence.');
 });
 
+test('transcription : « Absent. Paul et Karémy. » au début est reconnu', () => {
+  const r = extractAbsents('Absent. Paul et Karémy. Bonjour à tous. Réunion de coordination.');
+  assert.deepEqual(r.names, ['Paul', 'Karémy']);
+  assert.equal(r.text, 'Bonjour à tous. Réunion de coordination.');
+});
+
 test('pas de ligne « Absents » en tête : texte inchangé', () => {
   const text = 'Titre\nUn\nDeux\nTrois\nAbsents : Paul';
   assert.deepEqual(extractAbsents(text), { text, names: [] });

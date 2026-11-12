@@ -122,9 +122,11 @@ async function main() {
   let raw: string;
   if (AUDIO_EXTENSIONS.includes(extname(file).toLowerCase())) {
     const started = Date.now();
-    raw = await transcribe(file);
+    const transcription = await transcribe(file);
+    // Erreurs de transcription courantes corrigées dès maintenant, pour reconnaître aussi les absents.
+    raw = applyReplacements(transcription);
     const transcriptionPath = join('out', `${name}.transcription.txt`);
-    writeFileSync(transcriptionPath, raw + '\n', 'utf-8');
+    writeFileSync(transcriptionPath, transcription + '\n', 'utf-8');
     console.log(`Transcription : ${transcriptionPath} (${Math.round((Date.now() - started) / 1000)} s).`);
   } else {
     raw = await extractTextFromFile(file);
