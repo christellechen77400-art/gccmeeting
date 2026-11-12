@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { extractAbsents, loadDirectory, loadGroups, membersNotInDirectory, resolveGroup, splitPresence } from '../src/participants.ts';
 import { readFileSync } from 'node:fs';
-import { applyReplacements, checkCompteRendu, findRepetitions, missingSubjects } from '../src/postprocess.ts';
+import { applyReplacements, checkCompteRendu, findRepetitions, missingSubjects, removeRepetitions } from '../src/postprocess.ts';
 import { renderHtml } from '../src/template.ts';
 
 const MEMBERS = ['Jonathan Z.', 'Stéphane Z.', 'Christelle C.', 'David S.'];
@@ -110,4 +110,23 @@ test('objectif : éléments avec titre en piliers (picto, titre, texte), sinon �
   assert.ok(!pillars.includes('class="steps"'));
   const steps = renderHtml({ titre: 'T', date: '2026-11', blocs: [{ type: 'objectif', titre: 'O', elements: [{ texte: 'Un' }] }] });
   assert.ok(steps.includes('class="steps"') && !steps.includes('class="pillar"'));
+});
+
+test('répétitions restantes retirées par le code : la question est gardée, sinon la première', () => {
+  const cr = { ...base, blocs: [
+    { type: 'cartes' as const, titre: 'EDD et Bonté', elements: [{ titre: 'Groupe Bonté', texte: 'Nouveaux musiciens à mettre à l\'EDD ?' }, { titre: 'EDD 高班' }] },
+    { type: 'nouveautes' as const, titre: 'Nouveautés', elements: [{ titre: 'Groupes de louange fixes' }] },
+    { type: 'decisions' as const, titre: 'Décisions', elements: [{ titre: 'Groupes fixes' }] },
+    { type: 'questions' as const, titre: 'Questions', elements: [{ titre: 'Nouveaux musiciens à l\'EDD ?', texte: 'Pour le groupe Bonté.' }] },
+  ] };
+  const r = removeRepetitions(cr);
+  assert.deepEqual(r.removed, ['« Groupe Bonté » (EDD et Bonté)', '« Groupes fixes » (Décisions)']);
+  assert.deepEqual(r.cr.blocs.map((b) => b.elements?.map((e) => e.titre)), [['EDD 高班'], ['Groupes de louange fixes'], [], ['Nouveaux musiciens à l\'EDD ?']]);
+  assert.deepEqual(findRepetitions(r.cr), []);
+});
+
+test('consigne : la liste des membres vient de l\'annuaire', () => {
+  const prompt = readFileSync('src/prompt.md', 'utf-8');
+  assert.ok(prompt.includes('{{annuaire}}'));
+  assert.ok(!prompt.includes('Cyliane D.'));
 });

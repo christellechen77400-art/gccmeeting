@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { CATEGORIES } from './categories.ts';
 import { extractTextFromFile } from './extract.ts';
 import { extractAbsents, loadDirectory, loadGroups, membersNotInDirectory, resolveGroup, splitPresence } from './participants.ts';
-import { applyReplacements, checkCompteRendu, findRepetitions, missingSubjects } from './postprocess.ts';
+import { applyReplacements, checkCompteRendu, findRepetitions, missingSubjects, removeRepetitions } from './postprocess.ts';
 import { render } from './render.ts';
 import { AiCompteRenduSchema, COMPTE_RENDU_TOOL, TOOL_NAME, toCompteRendu, type AiCompteRendu } from './schema.ts';
 
@@ -26,17 +26,20 @@ function parisDate(d: Date): string {
 // Conversation avec l'IA, gardée pour pouvoir lui demander de raccourcir sa réponse.
 type Conversation = { client: Anthropic; model: string; system: string; messages: Anthropic.MessageParam[] };
 
-function startConversation(text: string, categorie: string, depositDate: string): Conversation {
+// La liste des membres de la consigne vient de l'annuaire ; les membres du groupe départagent les homonymes.
+function startConversation(text: string, categorie: string, depositDate: string, groupMembers: string[]): Conversation {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error('Clé API manquante : renseigne ANTHROPIC_API_KEY dans le fichier .env (modèle : .env.example).');
   }
   return {
     client: new Anthropic({ baseURL: process.env.ANTHROPIC_BASE_URL || undefined }),
     model: process.env.ANTHROPIC_MODEL || DEFAULT_MODEL,
-    system: readFileSync(PROMPT_PATH, 'utf-8'),
+    system: readFileSync(PROMPT_PATH, 'utf-8').replace('{{annuaire}}', loadDirectory().join(', ')),
     messages: [{
       role: 'user',
-      content: `Catégorie : ${categorie}\nDate de dépôt du fichier : ${depositDate}\n\n<notes>\n${text}\n</notes>`,
+      content: `Catégorie : ${categorie}\nDate de dépôt du fichier : ${depositDate}\n`
+        + (groupMembers.length ? `Membres du groupe de la réunion : ${groupMembers.join(', ')}\n` : '')
+        + `\n<notes>\n${text}\n</notes>`,
     }],
   };
 }
@@ -140,7 +143,7 @@ async function main() {
     return render(jsonPath);
   };
 
-  const conversation = startConversation(text, categorie, parisDate(statSync(file).mtime));
+  const conversation = startConversation(text, categorie, parisDate(statSync(file).mtime), groupe ? groups[groupe] : []);
   try {
     const first = await askModel(conversation);
     let result = await finish(first.ai);
@@ -167,7 +170,11 @@ async function main() {
       const shorter = await askModel(conversation);
       const missing = missingSubjects(first.ai, shorter.ai);
       if (missing.length) console.warn(`Contrôle : sujets introuvables dans la version raccourcie, à vérifier : ${missing.map((m) => `« ${m} »`).join(', ')}.`);
-      result = await finish(shorter.ai);
+      // Répétitions encore là après la relance : retirées par le code.
+      const cleaned = removeRepetitions(shorter.ai);
+      for (const r of cleaned.removed) console.log(`Répétition retirée : ${r}.`);
+      for (const r of cleaned.left) console.warn(`Contrôle : répétition non retirée (bloc entier), ${r}.`);
+      result = await finish(cleaned.cr);
       if (result.overflow) console.warn('Toujours trop long après raccourcissement : PDF sur 2 pages.');
     }
     console.log(`PDF : ${result.pdf}\nPNG : ${result.png}`);
