@@ -69,3 +69,66 @@ export function checkCompteRendu(cr: AiCompteRendu): string[] {
   }
   return warnings;
 }
+
+// Répétitions entre blocs (hors « À retenir », qui peut résumer) : un sujet repéré par les mots
+// de son titre. Les mots sont comparés sans accents, sur leurs 5 premières lettres (« groupes » = « groupe »,
+// « batterie » = « batteurs ») ; les mots courts et les mots outils sont ignorés.
+const STOPWORDS = new Set(['pour', 'avec', 'dans', 'cette', 'sont', 'tous', 'toute', 'toutes', 'chaque', 'leur', 'leurs',
+  'nous', 'vous', 'elles', 'entre', 'puis', 'plus', 'etre', 'fait', 'faire', 'aussi', 'encore', 'comme', 'avant', 'apres',
+  'depuis', 'pendant', 'sans', 'sous', 'vers', 'chez', 'mais', 'donc', 'ainsi', 'deja', 'faut']);
+const MIN_SUBJECT_WORDS = 2; // un seul mot (« Guitaristes ») est trop vague pour parler de répétition
+
+function stems(text: string | undefined): Set<string> {
+  const words = (text ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().match(/\p{L}+/gu) ?? [];
+  return new Set(words
+    .filter((w) => /\p{Script=Han}/u.test(w) || (w.length >= 4 && !STOPWORDS.has(w)))
+    .map((w) => w.slice(0, 5)));
+}
+
+type Subject = { label: string; block: number; blockLabel: string; titled: boolean; title: Set<string>; all: Set<string> };
+
+// Un sujet par titre de bloc et par élément ; sans titre (bilan, étapes), c'est le texte qui compte.
+// Le texte d'explication d'un objectif peut citer d'autres sujets (« avec les groupes fixes… ») : seul son titre compte.
+function subjects(cr: AiCompteRendu): Subject[] {
+  return cr.blocs.flatMap((b, i) => {
+    if (b.type === 'intertitre') return [];
+    const blockLabel = b.type === 'objectif' ? (b.sous_titre ?? 'Objectif') : (b.titre ?? b.type);
+    const own = b.type === 'objectif'
+      ? [{ label: b.titre ?? '', title: b.titre, titled: Boolean(b.titre), all: [b.titre, b.sous_titre] }]
+      : [{ label: blockLabel, title: b.titre, titled: Boolean(b.titre), all: [b.titre] }];
+    const items = (b.elements ?? []).map((e) => ({
+      label: e.titre ?? e.texte ?? '',
+      title: e.titre ?? e.texte,
+      titled: Boolean(e.titre),
+      all: [e.titre, e.texte, ...(e.tags ?? [])],
+    }));
+    return [...own, ...items].map((s) => ({
+      label: s.label, block: i, blockLabel, titled: s.titled, title: stems(s.title), all: stems(s.all.join(' ')),
+    }));
+  });
+}
+
+const contains = (big: Set<string>, small: Set<string>) => [...small].every((w) => big.has(w));
+
+export function findRepetitions(cr: AiCompteRendu): string[] {
+  const list = subjects(cr);
+  const found: string[] = [];
+  const pairs = new Set<string>(); // une seule fois par paire, dans un sens ou dans l'autre
+  for (const [i, a] of list.entries()) {
+    if (a.title.size < MIN_SUBJECT_WORDS) continue;
+    for (const [j, b] of list.entries()) {
+      if (b.block === a.block || !contains(b.all, a.title) || pairs.has(`${Math.min(i, j)}-${Math.max(i, j)}`)) continue;
+      pairs.add(`${Math.min(i, j)}-${Math.max(i, j)}`);
+      found.push(`« ${a.label} » (${a.blockLabel}) revient dans « ${b.label} » (${b.blockLabel})`);
+    }
+  }
+  return found;
+}
+
+// Sujets (titres) de la première version qu'on ne retrouve plus dans la version raccourcie (À retenir compris).
+// Les phrases sans titre (bilan, étapes) sont ignorées : raccourcies, elles changent presque toujours de mots.
+export function missingSubjects(before: AiCompteRendu, after: AiCompteRendu): string[] {
+  const words = new Set([...subjects(after).flatMap((s) => [...s.all]),
+    ...after.a_retenir.flatMap((p) => [...stems(`${p.titre} ${p.detail ?? ''}`)])]);
+  return subjects(before).filter((s) => s.titled && s.title.size && !contains(words, s.title)).map((s) => s.label);
+}

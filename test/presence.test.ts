@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { extractAbsents, loadDirectory, loadGroups, membersNotInDirectory, resolveGroup, splitPresence } from '../src/participants.ts';
-import { applyReplacements, checkCompteRendu } from '../src/postprocess.ts';
+import { readFileSync } from 'node:fs';
+import { applyReplacements, checkCompteRendu, findRepetitions, missingSubjects } from '../src/postprocess.ts';
 import { renderHtml } from '../src/template.ts';
 
 const MEMBERS = ['Jonathan Z.', 'Stéphane Z.', 'Christelle C.', 'David S.'];
@@ -72,4 +73,41 @@ test('bandeau : présents en gras, absents à part, rien sans groupe', () => {
   assert.ok(html.includes('<div class="who">Présents : <b>Jonathan Z. · Christelle C.</b></div>'));
   assert.ok(html.includes('<div class="who">Absents : Stéphane Z.</div>'));
   assert.ok(!renderHtml({ titre: 'T', date: '2026-11' }).includes('class="who"'));
+});
+
+const base = { titre: 'T', date: '2026-11', a_retenir: [{ titre: 'Groupes fixes' }], a_confirmer: [] };
+
+test('répétitions entre blocs : repérées (hors « À retenir »), un mot seul ignoré', () => {
+  const cr = {
+    ...base,
+    blocs: [
+      { type: 'nouveautes' as const, titre: 'Nouveautés', elements: [{ titre: 'Groupes de louange fixes' }, { titre: 'Nouveau guitariste', texte: 'David S. en mars 2027.' }] },
+      { type: 'decisions' as const, titre: 'Décisions', elements: [{ titre: 'Groupes fixes', texte: 'Tous d\'accord.' }] },
+      { type: 'cartes' as const, titre: 'Objectifs par instrument', elements: [{ titre: 'Guitaristes', texte: 'Progresser.' }] },
+    ],
+  };
+  assert.deepEqual(findRepetitions(cr), ['« Groupes fixes » (Décisions) revient dans « Groupes de louange fixes » (Nouveautés)']);
+});
+
+test('répétitions : aucune dans l\'exemple musiciens validé', () => {
+  const { categorie, sous_titre, participants, absents, ...cr } = JSON.parse(readFileSync('exemples/musiciens.json', 'utf-8'));
+  assert.deepEqual(findRepetitions(cr), []);
+});
+
+test('raccourcissement : un sujet disparu est repéré, une répétition retirée ne l\'est pas', () => {
+  const before = { ...base, blocs: [
+    { type: 'nouveautes' as const, elements: [{ titre: 'Groupes de louange fixes' }, { titre: 'Campus inter-église' }] },
+    { type: 'decisions' as const, elements: [{ titre: 'Groupes fixes' }] },
+  ] };
+  const after = { ...base, blocs: [{ type: 'nouveautes' as const, elements: [{ titre: 'Groupes de louange fixes' }] }] };
+  assert.deepEqual(missingSubjects(before, after), ['Campus inter-église']);
+});
+
+test('objectif : éléments avec titre en piliers (picto, titre, texte), sinon étapes numérotées', () => {
+  const pillars = renderHtml({ titre: 'T', date: '2026-11', blocs: [{ type: 'objectif', titre: 'Thème', elements: [
+    { titre: 'Prière', texte: 'Portée par **Jonathan**.', picto: 'hands' }, { titre: 'Louange', picto: 'music' }] }] });
+  assert.ok(pillars.includes('<div class="pillar"><svg class="ico lg w"><use href="#hands"/></svg><div><b>Prière</b><span>Portée par <b>Jonathan</b>.</span></div></div>'));
+  assert.ok(!pillars.includes('class="steps"'));
+  const steps = renderHtml({ titre: 'T', date: '2026-11', blocs: [{ type: 'objectif', titre: 'O', elements: [{ texte: 'Un' }] }] });
+  assert.ok(steps.includes('class="steps"') && !steps.includes('class="pillar"'));
 });

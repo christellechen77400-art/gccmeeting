@@ -105,12 +105,18 @@ function renderBlock(b: Block, big = false): string {
     case 'bilan':
       return `<section>${heading(b, big)}${dots(els.map(elementText))}</section>`;
     case 'objectif': {
-      const steps = els.length
-        ? `<div><div class="eyebrow" style="margin-bottom:2mm">${plain(b.titre_etapes ?? 'Étapes')}</div>`
+      // Éléments avec un titre : piliers (picto, titre, texte), comme reference/exemple-cr-gcc.png ;
+      // sinon étapes numérotées, comme reference/exemple-cr-musiciens.png.
+      const pillars = els.length > 0 && els.every((e) => e.titre);
+      const steps = !els.length ? '' : pillars
+        ? '<div class="pillars">'
+          + els.map((e) => `<div class="pillar">${icon(e.picto, 'target', 'lg w')}<div><b>${plain(e.titre)}</b>`
+            + (e.texte ? `<span>${rich(e.texte)}</span>` : '') + '</div></div>').join('')
+          + '</div>'
+        : `<div><div class="eyebrow" style="margin-bottom:2mm">${plain(b.titre_etapes ?? 'Étapes')}</div>`
           + `<div class="steps" style="grid-template-columns:repeat(${Math.min(els.length, 4)},1fr)">`
           + els.map((e, i) => `<div><span class="n">${i + 1}</span>${rich(elementText(e))}</div>`).join('')
-          + '</div></div>'
-        : '';
+          + '</div></div>';
       return `<section><div class="goal${steps ? ' split' : ''}"><div class="txt">`
         + `<div class="eyebrow">${plain(b.sous_titre ?? d.titre)}</div>`
         + (b.titre ? `<h3>${plain(b.titre)}</h3>` : '')
@@ -242,6 +248,12 @@ ul.dots li::before{content:"";position:absolute;left:.6mm;top:2.1mm;width:1.4mm;
 .steps div{border:0.25mm solid rgba(233,183,159,.35);border-radius:1.6mm;padding:2.4mm 2mm;font-size:8.6pt;color:#F4EEE6;line-height:1.25}
 .steps .n{display:block;font-family:Caladea,serif;font-weight:700;font-size:12pt;color:#E9B79F}
 .steps div b{color:#fff}
+.pillars{display:grid;gap:2.2mm}
+.pillar{display:flex;gap:2.6mm;align-items:flex-start;border:0.25mm solid rgba(233,183,159,.35);border-radius:1.6mm;padding:2.4mm 3mm}
+.pillar b{font-family:Caladea,serif;font-size:11pt;color:#E9B79F;display:block}
+.pillar span{font-size:9.4pt;color:#F4EEE6}
+.pillar span b{display:inline;font-family:inherit;font-size:inherit;color:#fff}
+.ico.w{stroke:#E9B79F}
 .grid{display:grid;gap:3mm}
 .grid .card{height:100%}
 .card{background:var(--card);border-radius:2.2mm;padding:3.4mm 3.8mm;display:flex;gap:3.2mm;align-items:flex-start}

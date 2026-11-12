@@ -9,13 +9,15 @@ import { z } from 'zod';
 import { CATEGORIES } from './categories.ts';
 import { extractTextFromFile } from './extract.ts';
 import { extractAbsents, loadDirectory, loadGroups, membersNotInDirectory, resolveGroup, splitPresence } from './participants.ts';
-import { applyReplacements, checkCompteRendu } from './postprocess.ts';
+import { applyReplacements, checkCompteRendu, findRepetitions, missingSubjects } from './postprocess.ts';
 import { render } from './render.ts';
 import { AiCompteRenduSchema, COMPTE_RENDU_TOOL, TOOL_NAME, toCompteRendu, type AiCompteRendu } from './schema.ts';
 
 const DEFAULT_MODEL = 'deepseek-flash';
 const PROMPT_PATH = new URL('./prompt.md', import.meta.url);
 const TEMPERATURE = 0.2; // basse : des comptes-rendus plus réguliers d'un essai à l'autre
+// Le bandeau ne rétrécit pas : pour gagner X % de la page, le contenu doit raccourcir de plus de X %.
+const SHORTEN_FACTOR = 1.5;
 
 function parisDate(d: Date): string {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris' }).format(d); // AAAA-MM-JJ
@@ -132,6 +134,7 @@ async function main() {
     const ai = applyReplacements(answer);
     for (const name of presence.unknown) ai.a_confirmer.push(`Absent non reconnu dans le groupe : ${name}`);
     for (const warning of checkCompteRendu(ai)) console.warn(`Contrôle : ${warning}`);
+    for (const repetition of findRepetitions(ai)) console.warn(`Contrôle : répétition, ${repetition}.`);
     writeFileSync(jsonPath, JSON.stringify(toCompteRendu(ai, categorie, { participants: presence.participants, absents: presence.absents }), null, 2) + '\n', 'utf-8');
     console.log(`JSON : ${jsonPath}`);
     return render(jsonPath);
@@ -141,21 +144,29 @@ async function main() {
   try {
     const first = await askModel(conversation);
     let result = await finish(first.ai);
-    // Plus d'une page même réduit au minimum : un seul essai pour raccourcir ; sinon le PDF reste sur 2 pages.
+    // Plus d'une page même réduit au minimum : un seul essai pour retirer les répétitions et raccourcir ;
+    // sinon le PDF reste sur 2 pages.
     if (result.overflow) {
-      console.log(`Trop long de ${result.overflow} % : le modèle raccourcit les textes.`);
+      const repetitions = findRepetitions(first.ai);
+      const target = Math.ceil(result.overflow * SHORTEN_FACTOR);
+      console.log(`Trop long de ${result.overflow} % : le modèle retire les répétitions (${repetitions.length}) et raccourcit d'environ ${target} %.`);
       conversation.messages.push({
         role: 'user',
         content: [{
           type: 'tool_result',
           tool_use_id: first.toolUseId,
-          content: `Trop long de ${result.overflow} % pour tenir sur une page A4, même avec le texte réduit au minimum lisible. Raccourcis les textes sans supprimer aucun sujet, puis rappelle l'outil avec le compte-rendu complet.`,
+          content: [
+            `Trop long de ${result.overflow} % pour tenir sur une page A4, même avec le texte réduit au minimum lisible.`,
+            '1. D\'abord, supprime les répétitions : chaque information n\'apparaît qu\'une seule fois ; seul « À retenir » peut résumer ce qui est détaillé ailleurs.'
+              + (repetitions.length ? ` Répétitions repérées :\n${repetitions.map((r) => `- ${r}`).join('\n')}` : ''),
+            `2. Puis raccourcis les textes d'environ ${target} %, sans supprimer aucun sujet.`,
+            'Rappelle ensuite l\'outil avec le compte-rendu complet.',
+          ].join('\n'),
         }],
       });
       const shorter = await askModel(conversation);
-      const before = countElements(first.ai);
-      const after = countElements(shorter.ai);
-      if (after < before) console.warn(`Contrôle : la version raccourcie a ${after} éléments au lieu de ${before} : vérifier qu'aucun sujet n'a disparu.`);
+      const missing = missingSubjects(first.ai, shorter.ai);
+      if (missing.length) console.warn(`Contrôle : sujets introuvables dans la version raccourcie, à vérifier : ${missing.map((m) => `« ${m} »`).join(', ')}.`);
       result = await finish(shorter.ai);
       if (result.overflow) console.warn('Toujours trop long après raccourcissement : PDF sur 2 pages.');
     }
@@ -163,11 +174,6 @@ async function main() {
   } catch (err) {
     throw explainApiError(err);
   }
-}
-
-// Points « À retenir », éléments des blocs et objectifs : sert à repérer un sujet supprimé en raccourcissant.
-function countElements(ai: AiCompteRendu): number {
-  return ai.a_retenir.length + ai.blocs.reduce((n, b) => n + (b.elements?.length ?? 0) + (b.type === 'objectif' ? 1 : 0), 0);
 }
 
 main().catch((err: Error) => {
