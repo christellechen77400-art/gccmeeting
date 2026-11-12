@@ -2,6 +2,27 @@
 
 À mettre à jour à la fin de chaque conversation (Claude ou Claude Code). Le plus récent en haut.
 
+## 12/11/2026 — Claude Code, Mission 3 : un fichier audio vers le compte-rendu
+**Fait** (branche `mission-3-audio`, fusionnée dans `main` après le tag `BeforeAnySignificantChange-MAJ03`)
+- `npm run cr -- <fichier audio> --categorie "<Catégorie>" [--groupe "<Groupe>"]` accepte m4a, mp3, wav, webm, mp4, ogg (`src/transcribe.ts`).
+  - Transcription Groq, `whisper-large-v3-turbo`, français, clé `GROQ_API_KEY` ; appel direct à l'API avec `fetch` (aucun nouveau paquet).
+  - Au-delà de 25 Mo (limite d'une pièce jointe chez Groq) : compression ffmpeg (mono, 16 kHz, 32 kbit/s, MP3) ; si c'est encore trop gros, découpage en morceaux (un peu sous la limite), textes recollés dans l'ordre. Un mot peut être coupé à une jonction (pas de chevauchement).
+  - ffmpeg manquant : message « Installe-le avec : brew install ffmpeg ». ffmpeg 9.0.1 est installé sur le Mac de Christelle.
+  - Transcription brute (avant remplacements) enregistrée dans `out/<nom>.transcription.txt`.
+- **Absents dits au début de l'enregistrement** : Whisper écrit « Absent. Paul et Carémy. » : « Absents » suivi de `:`, `.` ou `,` est reconnu (`src/participants.ts`).
+- **Remplacements** (`src/remplacements.json`) appliqués aussi à la transcription, avant de chercher les absents. Ajoutés : « Carémy » → « Karémy », « dédégao » → « EDD 高班 » (vus sur l'essai de synthèse) ; « Davidson » → « David S. » y était déjà.
+- **Tests** : `npm test` → 31 tests OK, dont compression et découpage vérifiés avec un son de synthèse de 3 min, sans appel à Groq ; `npm run typecheck` → sans erreur.
+- **Essai de bout en bout** avec une voix de synthèse du Mac (« Flo », français), groupe Comité Orga : transcription en 1 s, 2 absents reconnus (Paul W., Karémy X.), David S. et 高班 justes, compte-rendu sur une page.
+- **SPEC** : missions 4 (Drive) et 5 (mise en ligne) reportées ; on teste en local, avec dépôt du fichier dans l'interface (pour l'instant en ligne de commande).
+- `.env.example` complété par Christelle (DeepSeek, `GROQ_API_KEY`) ; `GROQ_API_KEY` ajoutée dans `.env` par Christelle (vérifiée sans l'afficher).
+
+**Pas encore vérifié**
+- Aucun vrai enregistrement de réunion : à faire sur une vraie réunion (choix de Christelle). Regarder alors `out/<nom>.transcription.txt` et compléter `src/remplacements.json` avec les erreurs de transcription courantes.
+- Un fichier de plus de 25 Mo réellement envoyé à Groq (seule la préparation est testée).
+
+**Reste à faire**
+- Mission suivante : dépôt du fichier dans l'interface, en local.
+
 ## 12/11/2026 — Claude Code, Mission 2 (fin) : derniers réglages et fusion dans `main`
 **Fait**
 - **Répétitions retirées par le code** (`removeRepetitions`, `src/postprocess.ts`) : après la relance « trop long », une répétition encore repérée est retirée. On garde la version « question » (bloc `questions` ou titre finissant par « ? ») si l'une des deux en est une, sinon celle qui apparaît en premier. Seul un élément est retiré, jamais un bloc entier (signalé dans la console).
