@@ -1,6 +1,8 @@
 node_modules/
 dist/
-.env
+# Clés et réglages locaux : tous les .env* sauf le modèle .env.example
+.env*
+!.env.example
 *.log
 .DS_Store
 out/

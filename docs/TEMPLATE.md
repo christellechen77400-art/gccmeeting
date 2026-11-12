@@ -14,6 +14,7 @@
 - La couleur de catégorie sert à : point + libellé « ● Catégorie · Groupe » au-dessus du titre, halo flou en haut à gauche,
   carte « À retenir » teintée (9 %) avec numéros en pastilles pleines, titre et puces du bilan, mot « 2027 »,
   bloc objectif en fond plein, petite barre devant les intertitres, pictos dans un rond teinté (12 %).
+- GCC : rouge du logo `#cf2a20` pour le point, la signature et les petits éléments ; rouge plus profond `#a8261d` pour les grandes surfaces (bloc objectif, numéros pleins).
 - Le reste reste neutre (gris clair, blanc, noir).
 - Participants en pastilles blanches sous le titre ; absents barrés.
 

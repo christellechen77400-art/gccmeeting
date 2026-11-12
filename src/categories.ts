@@ -3,11 +3,12 @@
 export interface Category {
   label: string; // nom affiché devant le groupe (« ● Culte Franco · Musiciens »)
   color: string;
+  deep?: string; // grandes surfaces (objectif, numéros pleins) si la couleur est trop vive ; sinon `color`
   defaultSubtitle: string;
 }
 
 export const CATEGORIES: Record<string, Category> = {
-  'GCC': { label: 'GCC', color: '#cf2a20', defaultSubtitle: 'Coordination' },
+  'GCC': { label: 'GCC', color: '#cf2a20', deep: '#a8261d', defaultSubtitle: 'Coordination' },
   'Culte Franco': { label: 'Culte Franco', color: '#2d5a65', defaultSubtitle: 'Louange' },
   'EDD': { label: 'EDD', color: '#3b6d11', defaultSubtitle: 'École du dimanche' },
   'DA': { label: 'DA', color: '#9d3c63', defaultSubtitle: 'Direction artistique' },

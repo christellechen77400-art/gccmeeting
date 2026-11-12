@@ -35,7 +35,10 @@ test('charte GCC : signature GCC Meeting, « À retenir » teinté et numéroté
   assert.ok(html.includes('<img src="data:image/png;base64,') && html.includes('GCC <span>Meeting</span>'));
   assert.ok(html.includes('<div class="panel tint">'));
   assert.ok(html.includes('<span class="num">1</span><div><b>Un</b>') && html.includes('<span class="num">2</span><div><b>Deux</b>'));
-  assert.ok(html.includes('.goal{background:var(--cat)'));
+  assert.ok(html.includes('.goal{background:var(--deep)') && html.includes('.row .num{flex:none;width:6mm;height:6mm;border-radius:50%;background:var(--deep)'));
+  // Grandes surfaces : rouge plus profond pour GCC, la couleur de la catégorie sinon.
+  assert.ok(renderHtml({ titre: 'T', date: '2026-11', categorie: 'GCC' }).includes('--cat:#cf2a20;--deep:#a8261d;'));
+  assert.ok(renderHtml({ titre: 'T', date: '2026-11', categorie: 'EDD' }).includes('--cat:#3b6d11;--deep:#3b6d11;'));
   assert.ok(html.includes('<h2 class="sec">Sujets</h2>'));
   assert.ok(html.includes('font-family:"Inter"'));
 });

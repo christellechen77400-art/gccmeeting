@@ -40,3 +40,5 @@
 | 12/11/2026 | Police Inter (fichiers woff2 de la version officielle 4.1, `github.com/rsms/inter`, licence OFL jointe) intégrée au rendu ; Caladea et Carlito retirées | La charte GCC demande Inter / Inter Display ; Inter n'est pas installée sur le Mac, l'intégrer donne le même rendu partout. Chinois : PingFang (Mac) ou Noto Sans CJK |
 | 12/11/2026 | Le groupe de la réunion s'affiche à côté de la catégorie (« ● Culte Franco · Musiciens ») ; sans groupe, sous-titre par défaut de la catégorie | Charte GCC (« Catégorie · Groupe ») |
 | 12/11/2026 | Espacements de la référence GCC réduits d'environ 10 % (tailles de texte inchangées) | Choix de Claude Code, à valider : avec les espacements exacts de la référence, l'essai GCC passait de 1 page à 4 % de trop |
+| 12/11/2026 | Catégorie GCC : rouge du logo `#cf2a20` pour le point, la signature et les petits éléments ; rouge plus profond `#a8261d` pour les grandes surfaces (objectif, numéros pleins) | Choix de Christelle |
+| 12/11/2026 | `.gitignore` : tous les `.env*` ignorés sauf `.env.example` ; fichier parasite `.env.` supprimé | Demandé par Christelle |
