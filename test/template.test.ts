@@ -41,6 +41,8 @@ test('charte GCC : signature GCC Meeting, « À retenir » teinté et numéroté
   assert.ok(renderHtml({ titre: 'T', date: '2026-11', categorie: 'EDD' }).includes('--cat:#3b6d11;--deep:#3b6d11;'));
   assert.ok(html.includes('<h2 class="sec">Sujets</h2>'));
   assert.ok(html.includes('font-family:"Inter"'));
+  // Un mot en gras dans le détail d'un point reste dans la phrase (pas de retour à la ligne).
+  assert.ok(html.includes('.row>div>b{display:block}') && !html.includes('.row b{display:block}'));
 });
 
 test('dates : jour précis ou mois seul', () => {

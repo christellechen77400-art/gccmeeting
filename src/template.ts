@@ -242,7 +242,7 @@ section{margin-top:3.9mm}
 .label{font-size:8pt;font-weight:600;color:var(--cat);margin-bottom:2.4mm;display:flex;align-items:center;gap:1.6mm}
 .row{display:flex;gap:3mm;align-items:flex-start;padding:1.6mm 0}
 .row+.row{border-top:.25mm solid var(--tint-line)}
-.row b{display:block}
+.row>div>b{display:block}
 .row span{color:var(--muted);font-size:9pt}
 .row .num{flex:none;width:6mm;height:6mm;border-radius:50%;background:var(--deep);color:#fff;display:grid;place-items:center;font-size:8.4pt;font-weight:600}
 .ico{width:4.6mm;height:4.6mm;flex:none;stroke:var(--cat);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
