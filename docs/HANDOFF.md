@@ -2,6 +2,34 @@
 
 À mettre à jour à la fin de chaque conversation (Claude ou Claude Code). Le plus récent en haut.
 
+## 12/11/2026 — Claude Code, Mission 6, ajustements de l'étape 1 et étape 2 : écran « Nouveau compte-rendu »
+**Ajustements de l'étape 1** (validée par Christelle)
+- Fichier parasite `.env.` supprimé ; `.gitignore` ignore tous les `.env*` sauf `.env.example`.
+- Catégorie GCC : rouge du logo `#cf2a20` pour le point, la signature et les petits éléments ; rouge plus profond `#a8261d` pour le bloc objectif et les numéros pleins (`deep` dans `src/categories.ts`).
+- Défaut corrigé : un mot en gras dans le détail d'un point « À retenir » ou d'une étape passait à la ligne.
+
+**Étape 2** (branche `mission-6-interface`, pas fusionnée)
+- `npm run app` → http://localhost:3000 (`src/app/server.ts`, serveur HTTP de Node, sans paquet ajouté ; pages dans `src/app/public/`).
+- Menu à gauche (les écrans 3 à 5 affichent « arrive à l'étape N »), police système, couleurs de la charte ; le halo prend la couleur de la catégorie choisie.
+- Écran 1 :
+  - trois sources : dépôt de fichier (cliquer ou glisser ; audio, PDF, Word .docx, texte), notes collées, enregistrement au micro du navigateur (MediaRecorder : webm sur Chrome, mp4 sur Safari) ;
+  - catégorie, groupe, date, titre facultatif ; participants du groupe (toucher = absent, « + Ajouter » avec l'annuaire en suggestion) ;
+  - « Créer le compte-rendu » avec la progression : envoi (en %), transcription (barrée pour des notes), rédaction, mise en page ; puis l'aperçu s'ouvre (écran provisoire : PNG et bouton PDF ; le volet « Corriger » vient à l'étape 3).
+- Moteur commun `src/pipeline.ts` (sorti de `src/cr.ts`, qui ne fait plus que lire les options).
+- Données dans `data/` (exclu de git, sauf `data/membres_groupes.json`) : annuaire et groupes copiés de `config/` au premier lancement ; un dossier par compte-rendu `data/comptes-rendus/<id>/`.
+- Consigne : « Date de la réunion » donnée par l'écran = date du compte-rendu, sans « à confirmer ».
+- Défaut corrigé pendant les essais : les notes collées arrivaient avec des retours à la ligne `\r\n`.
+- Tests : `npm test` → 35 tests OK (dont 3 pour l'interface, avec une chaîne factice sans IA) ; `npm run typecheck` → sans erreur.
+- Essais réels dans Chromium piloté par script (dossier de données temporaire) :
+  - notes musiciens collées, groupe Musiciens, 2 absents touchés, David S. ajouté : compte-rendu en une page (85 %), 9 présents, 2 absents ;
+  - enregistrement au micro (voix de synthèse française du Mac jouée à la place du micro, vrai MediaRecorder, 29 s, webm) : transcription Groq, « Absent. Paul et Lorenzo » reconnus, compte-rendu GCC · Comité Orga en une page.
+
+**Pas encore vérifié**
+- Le vrai micro du Mac : le faux micro de Chromium ne répond pas dans l'environnement automatisé ; à essayer dans Chrome ou Safari.
+- Un enregistrement long (plus de 25 Mo, compression puis découpage).
+
+**À noter pour l'étape 5** : Whisper a écrit « car Rémi » pour « Karémy » : une règle de remplacement à ajouter.
+
 ## 12/11/2026 — Claude Code, Mission 6 (interface locale), étape 1 : rendu à la charte GCC
 **Fait** (branche `mission-6-interface`, pas fusionnée)
 - `src/template.ts` refait d'après `reference/exemple-cr-musiciens-charte-gcc.html` :

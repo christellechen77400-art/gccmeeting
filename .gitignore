@@ -6,3 +6,7 @@ dist/
 *.log
 .DS_Store
 out/
+# Données de l'interface (comptes-rendus, annuaire, groupes, règles) : jamais dans git.
+# Exception : data/membres_groupes.json, source de l'annuaire ajoutée par Christelle.
+data/*
+!data/membres_groupes.json

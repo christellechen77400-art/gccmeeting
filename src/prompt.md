@@ -17,6 +17,7 @@ Tu rédiges le compte-rendu d'une réunion de l'église GCC (Grace Church, parti
 
 # Date
 - `date` : `AAAA-MM-JJ` si le jour est connu, `AAAA-MM` si seul le mois est connu.
+- Si le message donne la « Date de la réunion », c'est la date : recopie-la dans `date`, sans rien ajouter dans `a_confirmer` à son sujet.
 - Si l'année manque, déduis-la de la date de dépôt indiquée dans le message (la réunion a eu lieu avant le dépôt) et ajoute « Date exacte de la réunion » dans `a_confirmer`.
 - Si aucune date n'est donnée, recopie l'indication des notes telle quelle (ex. « Réunion 4/10 ») et ajoute « Date de la réunion » dans `a_confirmer`.
 

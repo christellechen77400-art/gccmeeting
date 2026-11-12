@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GCC Meeting</title>
+<link rel="icon" href="/logo.png">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<div class="layout">
+  <nav class="menu" aria-label="Menu">
+    <a class="brand" href="#/nouveau"><img src="/logo.png" alt="Logo GCC">GCC <span>Meeting</span></a>
+    <div class="links">
+      <a href="#/nouveau" data-screen="nouveau">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nouveau compte-rendu</a>
+      <a href="#/comptes-rendus" data-screen="comptes-rendus">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg>Comptes-rendus</a>
+      <a href="#/annuaire" data-screen="annuaire">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3c2.1.7 3.5 2.8 3.5 5.7"/></svg>Annuaire et groupes</a>
+      <a href="#/regles" data-screen="regles">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>Règles apprises</a>
+    </div>
+    <div class="me"><span class="avatar">C</span><span><b>Christelle C.</b><small>Administratrice</small></span></div>
+  </nav>
+  <main id="main">
+    <div class="halo" aria-hidden="true"></div>
+    <div id="screen"></div>
+  </main>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

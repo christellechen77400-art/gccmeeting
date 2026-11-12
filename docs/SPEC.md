@@ -4,8 +4,9 @@ Statut : version 0.1 (10/11/2026). Interface (UI/UX) en cours de validation dans
 
 ## 1. Fonctionnement attendu (100 % automatique)
 
-> **Pour l'instant (décision du 12/11/2026)** : on teste en local, avec dépôt du fichier dans l'interface ; aujourd'hui, en ligne de commande :
-> `npm run cr -- <fichier> --categorie "<Catégorie>" [--groupe "<Groupe>"]`.
+> **Pour l'instant (décision du 12/11/2026)** : on teste en local, avec dépôt du fichier dans l'interface :
+> `npm run app` puis http://localhost:3000 (mission 6, maquette `docs/maquette/`). Données dans `data/` (exclu de git).
+> En ligne de commande : `npm run cr -- <fichier> --categorie "<Catégorie>" [--groupe "<Groupe>"]`.
 > Le dépôt dans Google Drive (mission 4) et la mise en ligne (mission 5) sont reportés : les étapes 1, 2, 6, 7 et 8 ci-dessous viendront avec elles.
 
 1. Christelle (ou un référent) dépose un fichier dans un sous-dossier Drive du compte GCC Franco :
@@ -33,7 +34,7 @@ La catégorie vient du **nom du sous-dossier** : personne n'a à choisir le band
 - **Groupes** modifiables : créer, renommer, supprimer un groupe ; ajouter ou retirer des membres, choisis dans l'annuaire ou tapés à la main (un nom hors de l'annuaire est signalé mais accepté).
 - **Présents et absents** corrigeables pour chaque réunion, sans modifier le groupe.
 - Rien de figé : annuaire, groupes et présences se changent depuis l'interface, sans toucher au code.
-Le détail des écrans sera fixé dans l'artefact UI/UX.
+Le détail des écrans est fixé par la maquette validée le 12/11/2026 : `docs/maquette/` (5 écrans).
 
 ## 3. Technique (proposition)
 - Application Node.js (TypeScript) hébergée sur **Google Cloud Run** (projet du compte GCC Franco), déclenchée par **Cloud Scheduler** toutes les 5 minutes.

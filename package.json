@@ -7,6 +7,7 @@
   "scripts": {
     "render": "tsx src/render.ts",
     "cr": "tsx src/cr.ts",
+    "app": "tsx src/app/server.ts",
     "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
     "postinstall": "playwright install chromium"
