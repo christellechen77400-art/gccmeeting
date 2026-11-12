@@ -19,7 +19,8 @@
 - Données dans `data/` (exclu de git, sauf `data/membres_groupes.json`) : annuaire et groupes copiés de `config/` au premier lancement ; un dossier par compte-rendu `data/comptes-rendus/<id>/`.
 - Consigne : « Date de la réunion » donnée par l'écran = date du compte-rendu, sans « à confirmer ».
 - Défaut corrigé pendant les essais : les notes collées arrivaient avec des retours à la ligne `\r\n`.
-- Tests : `npm test` → 35 tests OK (dont 3 pour l'interface, avec une chaîne factice sans IA) ; `npm run typecheck` → sans erreur.
+- Sécurité (revue automatique) : le serveur refuse un autre nom d'hôte que `localhost` / `127.0.0.1` et toute modification sans l'en-tête `X-GCC-Meeting` ; un autre site ouvert dans le navigateur ne peut ni lire l'annuaire ni lancer un compte-rendu.
+- Tests : `npm test` → 36 tests OK (dont 4 pour l'interface, avec une chaîne factice sans IA) ; `npm run typecheck` → sans erreur.
 - Essais réels dans Chromium piloté par script (dossier de données temporaire) :
   - notes musiciens collées, groupe Musiciens, 2 absents touchés, David S. ajouté : compte-rendu en une page (85 %), 9 présents, 2 absents ;
   - enregistrement au micro (voix de synthèse française du Mac jouée à la place du micro, vrai MediaRecorder, 29 s, webm) : transcription Groq, « Absent. Paul et Lorenzo » reconnus, compte-rendu GCC · Comité Orga en une page.

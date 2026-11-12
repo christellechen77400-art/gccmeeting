@@ -27,6 +27,7 @@ const RESULT_FILES: Record<string, string> = {
   'cr.json': 'application/json; charset=utf-8',
 };
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+export const APP_HEADER = 'x-gcc-meeting'; // envoyé par l'interface pour toute modification
 
 type Pipeline = (input: PipelineInput) => Promise<PipelineResult>;
 
@@ -135,6 +136,13 @@ export function createApp(options: { dataDir?: string; pipeline?: Pipeline } = {
   }
 
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    // Usage local sans compte : un autre site ouvert dans le navigateur ne doit ni lire les données
+    // (nom d'hôte détourné, « DNS rebinding ») ni lancer un compte-rendu (formulaire envoyé en douce).
+    const port = req.socket.localPort;
+    if (![`localhost:${port}`, `127.0.0.1:${port}`].includes(req.headers.host ?? '')) throw new HttpError(403, 'Accès refusé.');
+    // Un en-tête personnalisé oblige le navigateur à demander l'accord du serveur pour un autre site, qui ne l'a pas.
+    if (req.method !== 'GET' && req.headers[APP_HEADER] !== '1') throw new HttpError(403, 'Accès refusé.');
+
     const url = new URL(req.url ?? '/', 'http://localhost');
     const path = url.pathname;
 

@@ -21,6 +21,7 @@ async function fakePipeline(input: PipelineInput) {
   return { json, ...(await render(json, input.outDir)), warnings: [] };
 }
 const calls: PipelineInput[] = [];
+const APP = { 'X-GCC-Meeting': '1' };
 
 async function start() {
   const dir = mkdtempSync(join(tmpdir(), 'gccmeeting-app-'));
@@ -68,7 +69,7 @@ test('interface : page, configuration, création depuis des notes collées, PDF 
     form.append('presents', JSON.stringify(['Jonathan Z.', 'Eva Y.', 'Invité X.']));
     form.append('absents', JSON.stringify(['Esther C.']));
     form.append('notes', 'Absents : Eva\n* Groupes fixes');
-    const created = await fetch(`${base}/api/comptes-rendus`, { method: 'POST', body: form });
+    const created = await fetch(`${base}/api/comptes-rendus`, { method: 'POST', body: form, headers: APP });
     assert.equal(created.status, 201);
     const { id } = await created.json();
     const meta = await waitReady(base, id);
@@ -105,7 +106,7 @@ test('interface : fichier déposé, erreurs de saisie, erreur de création, fich
         if (v instanceof Blob) form.append(k, v, name);
         else form.append(k, v);
       }
-      return fetch(`${base}/api/comptes-rendus`, { method: 'POST', body: form });
+      return fetch(`${base}/api/comptes-rendus`, { method: 'POST', body: form, headers: APP });
     };
     const ok = { categorie: 'GCC', date: '2026-10-04' };
 
@@ -128,6 +129,28 @@ test('interface : fichier déposé, erreurs de saisie, erreur de création, fich
     assert.equal((await fetch(`${base}/api/comptes-rendus/${meta.id}/meta.json`)).status, 404);
     assert.equal((await fetch(`${base}/api/comptes-rendus/${meta.id}/source.txt`)).status, 404);
     assert.equal((await fetch(`${base}/api/comptes-rendus/..%2F..%2Fconfig/cr.json`)).status, 404);
+  } finally {
+    server.close();
+  }
+});
+
+test('interface : un autre site ne peut ni lire les données ni lancer un compte-rendu', async () => {
+  const { server, base } = await start();
+  try {
+    const form = new FormData();
+    form.append('categorie', 'GCC');
+    form.append('date', '2026-10-04');
+    form.append('notes', 'x');
+    // Formulaire envoyé par un autre site : pas d'en-tête de l'interface.
+    assert.equal((await fetch(`${base}/api/comptes-rendus`, { method: 'POST', body: form })).status, 403);
+    // Nom d'hôte détourné (DNS rebinding) : refusé, même en lecture.
+    const port = new URL(base).port;
+    const { request } = await import('node:http');
+    const status = await new Promise<number>((resolve) => {
+      request({ host: '127.0.0.1', port, path: '/api/config', headers: { Host: `piege.example:${port}` } }, (res) => resolve(res.statusCode!)).end();
+    });
+    assert.equal(status, 403);
+    assert.equal((await fetch(`http://localhost:${port}/api/config`)).status, 200);
   } finally {
     server.close();
   }

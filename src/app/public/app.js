@@ -42,7 +42,7 @@ function setCat(name) {
 }
 
 async function api(path, options) {
-  const res = await fetch(path, options);
+  const res = await fetch(path, { ...options, headers: { 'X-GCC-Meeting': '1', ...options?.headers } });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.erreur || `Erreur ${res.status}`);
   return body;
@@ -341,6 +341,7 @@ function create() {
   renderMeeting();
   const xhr = new XMLHttpRequest();
   xhr.open('POST', '/api/comptes-rendus');
+  xhr.setRequestHeader('X-GCC-Meeting', '1'); // exigé par le serveur pour toute modification
   xhr.upload.onprogress = (e) => {
     if (!e.lengthComputable) return;
     draft.job.pct = Math.round((e.loaded / e.total) * 100);
