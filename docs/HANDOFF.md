@@ -2,6 +2,36 @@
 
 À mettre à jour à la fin de chaque conversation (Claude ou Claude Code). Le plus récent en haut.
 
+## 12/11/2026 — Claude Code, Mission 2 (fin) : derniers réglages et fusion dans `main`
+**Fait**
+- **Répétitions retirées par le code** (`removeRepetitions`, `src/postprocess.ts`) : après la relance « trop long », une répétition encore repérée est retirée. On garde la version « question » (bloc `questions` ou titre finissant par « ? ») si l'une des deux en est une, sinon celle qui apparaît en premier. Seul un élément est retiré, jamais un bloc entier (signalé dans la console).
+- **Rendu plus serré** (`src/template.ts`), tailles de texte inchangées :
+  - bandeau moins haut (marges 8/7 mm → 7/6 mm) ;
+  - marges latérales 10 → 9 mm ;
+  - espaces entre blocs et marges internes des cartes réduits d'environ 10 %.
+  - L'exemple musiciens validé reste lisible et le même dans l'ensemble (toujours 1 page, vérifié sur le PNG).
+- **Liste des membres de la consigne** générée depuis `config/annuaire.json` (`{{annuaire}}` dans `src/prompt.md`).
+  - L'annuaire a des prénoms en double (Christelle C. / Christelle Z., Stéphane Z. / Stéphane D.…) : les membres du groupe de la réunion sont donnés dans le message, et la consigne dit de les préférer. Sur l'essai GCC, « jo steph telle » donne bien Jonathan Z., Stéphane Z., Christelle C.
+- **David S.** : une seule personne, déjà une seule fiche dans l'annuaire.
+- **Notes GCC** : la ligne « Teams fixes 2027 » a été retirée par Christelle (`exemples/notes/reunion-gcc.txt`).
+- Tests : `npm test` → 28 tests OK ; `npm run typecheck` → sans erreur.
+
+**Essais `deepseek-flash`** (12/11/2026, PNG dans `essais/`)
+
+| | GCC 4/10 (Coordination Franco) | Musiciens |
+|---|---|---|
+| Jetons entrée / sortie | 4 214 / 1 014 | 4 812 / 1 110, puis 6 044 / 1 090 |
+| Résultat | **1 page** (réduit à 80 %), sans relance | **4 % de trop** après relance → PDF de 2 pages, la 2e presque vide |
+| Répétitions | aucune repérée | aucune repérée |
+| Écarts | « Pas d'âge minimum » en décision à part, alors que la règle de service le dit déjà (non repéré : titre d'un seul mot significatif) ; « EDD / Bonté » mis dans « À confirmer » au lieu du contenu | aucun écart important |
+
+**Fusion** : `mission-2-ia` fusionnée dans `main`, après un tag de retour arrière `BeforeAnySignificantChange-MAJ02` sur l'ancien `main`. Condition de Christelle : « les deux tiennent sur une page ou presque » ; jugée remplie (GCC 1 page, musiciens 4 % de trop).
+- Retour arrière possible sans effacer l'historique : `git revert -m 1 <commit de fusion>` sur `main`.
+
+**Reste à faire**
+- `.env.example` contient toujours « … » : Christelle doit relancer la commande `printf` (fichiers `.env*` bloqués pour Claude Code).
+- Mission suivante (voir SPEC) : Google Drive, transcription audio, interface.
+
 ## 12/11/2026 — Claude Code, Mission 2 (suite 4) : répétitions, piliers, annuaire complet
 **Fait** (branche `mission-2-ia`, **pas fusionnée dans `main`**)
 - **Annuaire** : 118 personnes. Les 59 nouveaux noms viennent de `data/membres_groupes.json` (onglet Membres_Groupes, ajouté par Christelle) ; tous les membres de Paix, Fidélité et Bonté y sont.

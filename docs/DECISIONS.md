@@ -28,3 +28,8 @@
 | 12/11/2026 | Annuaire complété avec l'onglet Membres_Groupes (`data/membres_groupes.json`, ajouté par Christelle) : 118 personnes | Demandé par Christelle |
 | 12/11/2026 | Une page : le problème est la répétition, pas la quantité. Chaque information une seule fois (seul « À retenir » résume) ; répétitions entre blocs repérées par le code et renvoyées au modèle avec le « trop long » ; raccourcir de 1,5 × le dépassement ; sinon 2 pages, accepté | Choix de Christelle |
 | 12/11/2026 | Objectif ou thème à piliers (ex. Prière, Louange) : éléments avec titre affichés en piliers, comme `reference/exemple-cr-gcc.png` ; sans titre, étapes numérotées | Demandé par Christelle |
+| 12/11/2026 | Répétitions encore là après la relance : retirées par le code (garder la question, sinon la première ; un bloc entier n'est jamais retiré) | Choix de Christelle |
+| 12/11/2026 | Rendu : bandeau moins haut, marges latérales 10 → 9 mm, espaces entre blocs et marges internes réduits d'environ 10 %, tailles de texte inchangées | Choix de Christelle |
+| 12/11/2026 | Liste des membres de la consigne générée depuis `config/annuaire.json` ; les membres du groupe de la réunion sont donnés dans le message pour départager les homonymes (ex. Christelle C. / Christelle Z.) | Demandé par Christelle (liste) ; groupe ajouté par Claude Code, car l'annuaire contient des prénoms en double |
+| 12/11/2026 | David S. : une seule personne (une fiche dans l'annuaire) | Confirmé par Christelle |
+| 12/11/2026 | Fusion de `mission-2-ia` dans `main` (tag `BeforeAnySignificantChange-MAJ02` posé avant) | Autorisée par Christelle si les deux essais tiennent sur une page « ou presque » : GCC 1 page, musiciens 4 % de trop |
