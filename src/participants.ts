@@ -7,7 +7,8 @@ import { basename, dirname } from 'node:path';
 const GROUPS_PATH = new URL('../config/groupes.json', import.meta.url);
 const DIRECTORY_PATH = new URL('../config/annuaire.json', import.meta.url);
 const HEAD_LINES = 3; // la ligne « Absents » est cherchée dans les premières lignes non vides
-const ABSENTS_START = /^\s*absent(?:e)?s?\s*:\s*/i;
+// « Absents : … » dans les notes ; une transcription écrit parfois « Absent. … » ou « Absents, … ».
+const ABSENTS_START = /^\s*absent(?:e)?s?\s*[:.,]\s*/i;
 // Fin de la liste : un point suivi d'un autre mot que « et » (« David S. Bonjour… »), ou en fin de ligne.
 // « David S., Paul » et « David S. et Paul » continuent la liste.
 const SENTENCE_END = /\.(?:\s+(?!et\b)(?=[^\s,;])|\s*$)/u;

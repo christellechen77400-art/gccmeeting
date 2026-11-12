@@ -1,5 +1,5 @@
 // Usage : npm run cr -- <fichier> --categorie "<Catégorie>" [--groupe "<Groupe>"]
-// Notes (.txt, .md, .pdf, .docx) → IA (API compatible Anthropic, DeepSeek deepseek-flash par défaut) → out/<nom>.json → out/<nom>.pdf + out/<nom>.png
+// Notes (.txt, .md, .pdf, .docx) ou audio (.m4a, .mp3, .wav, .webm, .mp4, .ogg → transcription Groq) → IA (API compatible Anthropic, DeepSeek deepseek-flash par défaut) → out/<nom>.json → out/<nom>.pdf + out/<nom>.png
 
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
@@ -11,6 +11,7 @@ import { extractTextFromFile } from './extract.ts';
 import { extractAbsents, loadDirectory, loadGroups, membersNotInDirectory, resolveGroup, splitPresence } from './participants.ts';
 import { applyReplacements, checkCompteRendu, findRepetitions, missingSubjects, removeRepetitions } from './postprocess.ts';
 import { render } from './render.ts';
+import { AUDIO_EXTENSIONS, transcribe } from './transcribe.ts';
 import { AiCompteRenduSchema, COMPTE_RENDU_TOOL, TOOL_NAME, toCompteRendu, type AiCompteRendu } from './schema.ts';
 
 const DEFAULT_MODEL = 'deepseek-flash';
@@ -115,7 +116,23 @@ async function main() {
   const groupe = resolveGroup(groups, file, values.groupe);
   if (existsSync('.env')) process.loadEnvFile('.env');
 
-  const extracted = extractAbsents(await extractTextFromFile(file));
+  // Audio : transcription Groq, enregistrée telle quelle pour pouvoir la relire.
+  mkdirSync('out', { recursive: true });
+  const name = basename(file, extname(file));
+  let raw: string;
+  if (AUDIO_EXTENSIONS.includes(extname(file).toLowerCase())) {
+    const started = Date.now();
+    const transcription = await transcribe(file);
+    // Erreurs de transcription courantes corrigées dès maintenant, pour reconnaître aussi les absents.
+    raw = applyReplacements(transcription);
+    const transcriptionPath = join('out', `${name}.transcription.txt`);
+    writeFileSync(transcriptionPath, transcription + '\n', 'utf-8');
+    console.log(`Transcription : ${transcriptionPath} (${Math.round((Date.now() - started) / 1000)} s).`);
+  } else {
+    raw = await extractTextFromFile(file);
+  }
+  // « Absents : … » en tête des notes, ou dit au début de l'enregistrement.
+  const extracted = extractAbsents(raw);
   const text = extracted.text;
   console.log(`Texte extrait : ${text.length} caractères.`);
 
@@ -130,8 +147,7 @@ async function main() {
     console.warn(`Attention : « ${name} » (groupe ${groupe}) n'est pas dans config/annuaire.json ; gardé quand même.`);
   }
 
-  mkdirSync('out', { recursive: true });
-  const jsonPath = join('out', `${basename(file, extname(file))}.json`);
+  const jsonPath = join('out', `${name}.json`);
   // Corrections par le code, contrôles, puis JSON enregistré et rendu en PDF + PNG.
   const finish = async (answer: AiCompteRendu) => {
     const ai = applyReplacements(answer);

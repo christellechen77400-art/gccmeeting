@@ -33,3 +33,6 @@
 | 12/11/2026 | Liste des membres de la consigne générée depuis `config/annuaire.json` ; les membres du groupe de la réunion sont donnés dans le message pour départager les homonymes (ex. Christelle C. / Christelle Z.) | Demandé par Christelle (liste) ; groupe ajouté par Claude Code, car l'annuaire contient des prénoms en double |
 | 12/11/2026 | David S. : une seule personne (une fiche dans l'annuaire) | Confirmé par Christelle |
 | 12/11/2026 | Fusion de `mission-2-ia` dans `main` (tag `BeforeAnySignificantChange-MAJ02` posé avant) | Autorisée par Christelle si les deux essais tiennent sur une page « ou presque » : GCC 1 page, musiciens 4 % de trop |
+| 12/11/2026 | Missions 4 (Google Drive) et 5 (mise en ligne) reportées : on teste en local, avec dépôt du fichier dans l'interface | Choix de Christelle |
+| 12/11/2026 | Audio : Groq `whisper-large-v3-turbo` en français, appel direct (`fetch`), compression ffmpeg puis découpage au-delà de 25 Mo ; remplacements appliqués aussi à la transcription | Demandé par Christelle |
+| 12/11/2026 | Fusion de `mission-3-audio` dans `main` (tag `BeforeAnySignificantChange-MAJ03` posé avant), test sur une vraie réunion reporté | Demandé par Christelle |
