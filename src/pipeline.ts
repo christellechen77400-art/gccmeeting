@@ -10,8 +10,9 @@ import { extractTextFromFile } from './extract.ts';
 import { extractAbsents, splitPresence } from './participants.ts';
 import { applyReplacements, checkCompteRendu, findRepetitions, missingSubjects, removeRepetitions } from './postprocess.ts';
 import { render } from './render.ts';
+import { replacementsFrom, rulesPrompt, type Rule } from './rules.ts';
 import { AUDIO_EXTENSIONS, transcribe } from './transcribe.ts';
-import { AiCompteRenduSchema, COMPTE_RENDU_TOOL, TOOL_NAME, toCompteRendu, type AiCompteRendu } from './schema.ts';
+import { AiCompteRenduSchema, COMPTE_RENDU_TOOL, toCompteRendu, type AiCompteRendu } from './schema.ts';
 
 const DEFAULT_MODEL = 'deepseek-flash';
 const PROMPT_PATH = new URL('./prompt.md', import.meta.url);
@@ -31,6 +32,7 @@ export interface PipelineInput {
   depositDate?: string; // AAAA-MM-JJ : l'IA en déduit l'année si elle manque
   meetingDate?: string; // AAAA-MM-JJ choisie dans l'interface : elle remplace la date trouvée par l'IA
   titre?: string; // titre choisi dans l'interface : il remplace celui de l'IA
+  rules?: Rule[]; // règles apprises (interface) : données à l'IA, noms remplacés ; sinon src/remplacements.json
   outDir: string;
   name: string; // fichiers <name>.json, .pdf, .png (et .transcription.txt pour un audio)
   onStep?: (step: Step) => void;
@@ -43,36 +45,48 @@ export interface PipelineResult {
   png: string;
   overflow: number;
   transcription?: string; // chemin de la transcription brute (audio)
+  text: string; // chemin du texte donné à l'IA (<name>.texte.txt)
   warnings: string[];
 }
 
 // Conversation avec l'IA, gardée pour pouvoir lui demander de raccourcir sa réponse.
-type Conversation = { client: Anthropic; model: string; system: string; messages: Anthropic.MessageParam[] };
+export type Conversation = { client: Anthropic; model: string; system: string; messages: Anthropic.MessageParam[] };
+type Log = NonNullable<PipelineInput['log']>;
 
-// La liste des membres de la consigne vient de l'annuaire ; les membres du groupe départagent les homonymes.
-function startConversation(text: string, input: PipelineInput): Conversation {
+// Consigne : prompt.md, avec l'annuaire et les règles apprises actives.
+export function startConversation(directory: string[], rules: Rule[] = [], extra = ''): Conversation {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error('Clé API manquante : renseigne ANTHROPIC_API_KEY dans le fichier .env (modèle : .env.example).');
   }
-  const people = [...input.members, ...(input.absents ?? [])];
   return {
     client: new Anthropic({ baseURL: process.env.ANTHROPIC_BASE_URL || undefined }),
     model: process.env.ANTHROPIC_MODEL || DEFAULT_MODEL,
-    system: readFileSync(PROMPT_PATH, 'utf-8').replace('{{annuaire}}', input.directory.join(', ')),
-    messages: [{
+    system: readFileSync(PROMPT_PATH, 'utf-8').replace('{{annuaire}}', directory.join(', ')) + rulesPrompt(rules) + extra,
+    messages: [],
+  };
+}
+
+// La liste des membres de la consigne vient de l'annuaire ; les membres du groupe départagent les homonymes.
+function firstMessage(text: string, input: PipelineInput): Anthropic.MessageParam[] {
+  const people = [...input.members, ...(input.absents ?? [])];
+  return [{
       role: 'user',
       content: `Catégorie : ${input.categorie}\n`
         + (input.meetingDate ? `Date de la réunion : ${input.meetingDate}\n` : `Date de dépôt du fichier : ${input.depositDate}\n`)
         + (people.length ? `Membres du groupe de la réunion : ${people.join(', ')}\n` : '')
         + `\n<notes>\n${text}\n</notes>`,
-    }],
-  };
+  }];
 }
 
-// L'IA répond en appelant l'outil enregistrer_compte_rendu (forcé, sans réflexion).
+// L'IA répond en appelant l'outil donné (forcé, sans réflexion), par défaut enregistrer_compte_rendu.
 // JSON non conforme : un seul nouvel essai, en renvoyant l'erreur au modèle.
 // La réponse retenue est ajoutée à la conversation ; `toolUseId` permet d'y répondre.
-async function askModel({ client, model, system, messages }: Conversation, log: NonNullable<PipelineInput['log']>): Promise<{ ai: AiCompteRendu; toolUseId: string }> {
+export async function askTool<T>(
+  { client, model, system, messages }: Conversation,
+  log: Log,
+  tool: { name: string; description: string; input_schema: { type: 'object'; [key: string]: unknown } },
+  schema: z.ZodType<T>,
+): Promise<{ value: T; toolUseId: string }> {
   for (let attempt = 1; ; attempt++) {
     // `temperature` n'est plus dans l'API Anthropic ni dans le SDK, mais DeepSeek la prend en compte.
     const params: Anthropic.MessageCreateParamsNonStreaming & { temperature: number } = {
@@ -81,8 +95,8 @@ async function askModel({ client, model, system, messages }: Conversation, log: 
       temperature: TEMPERATURE,
       system,
       messages,
-      tools: [COMPTE_RENDU_TOOL],
-      tool_choice: { type: 'tool', name: TOOL_NAME },
+      tools: [tool],
+      tool_choice: { type: 'tool', name: tool.name },
       thinking: { type: 'disabled' },
     };
     const response = await client.messages.create(params);
@@ -91,14 +105,14 @@ async function askModel({ client, model, system, messages }: Conversation, log: 
     const cached = response.usage.cache_read_input_tokens ?? 0;
     log.info(`${response.model} : ${response.usage.input_tokens + cached} jetons en entrée (dont ${cached} en cache), ${response.usage.output_tokens} en sortie.`);
 
-    const call = response.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use' && b.name === TOOL_NAME);
-    const checked = AiCompteRenduSchema.safeParse(call?.input);
+    const call = response.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use' && b.name === tool.name);
+    const checked = schema.safeParse(call?.input);
     if (checked.success) {
       messages.push({ role: 'assistant', content: response.content });
-      return { ai: checked.data, toolUseId: call!.id }; // valide, donc l'outil a bien été appelé
+      return { value: checked.data, toolUseId: call!.id }; // valide, donc l'outil a bien été appelé
     }
 
-    const problem = call ? z.prettifyError(checked.error) : `pas d'appel à l'outil ${TOOL_NAME}`;
+    const problem = call ? z.prettifyError(checked.error) : `pas d'appel à l'outil ${tool.name}`;
     if (attempt === 2) throw new Error(`JSON du modèle non conforme après 2 essais :\n${problem}`);
     log.warn(`JSON du modèle non conforme, nouvel essai :\n${problem}`);
     messages.push(
@@ -107,13 +121,18 @@ async function askModel({ client, model, system, messages }: Conversation, log: 
         role: 'user',
         content: call
           ? [{ type: 'tool_result', tool_use_id: call.id, is_error: true, content: `JSON non conforme au format :\n${problem}\nRappelle l'outil avec le JSON corrigé.` }]
-          : `Appelle l'outil ${TOOL_NAME} avec le compte-rendu.`,
+          : `Appelle l'outil ${tool.name}.`,
       },
     );
   }
 }
 
-function explainApiError(err: unknown): Error {
+async function askModel(conversation: Conversation, log: Log): Promise<{ ai: AiCompteRendu; toolUseId: string }> {
+  const { value, toolUseId } = await askTool(conversation, log, COMPTE_RENDU_TOOL, AiCompteRenduSchema);
+  return { ai: value, toolUseId };
+}
+
+export function explainApiError(err: unknown): Error {
   if (err instanceof Anthropic.AuthenticationError) return new Error(`Clé API refusée par ${process.env.ANTHROPIC_BASE_URL || 'api.anthropic.com'} : vérifie ANTHROPIC_API_KEY et ANTHROPIC_BASE_URL dans .env (${err.message}).`);
   if (err instanceof Anthropic.NotFoundError) return new Error(`Modèle introuvable : vérifie ANTHROPIC_MODEL dans .env (${process.env.ANTHROPIC_MODEL}).`);
   if (err instanceof Anthropic.RateLimitError) return new Error('Trop de demandes à l\'API Anthropic : réessaie dans une minute.');
@@ -129,6 +148,7 @@ export async function createCompteRendu(input: PipelineInput): Promise<PipelineR
     warn: (msg: string) => { warnings.push(msg); (input.log?.warn ?? console.warn)(msg); },
   };
   mkdirSync(input.outDir, { recursive: true });
+  const replacements = input.rules && replacementsFrom(input.rules);
 
   // Audio : transcription Groq, enregistrée telle quelle pour pouvoir la relire.
   let raw: string;
@@ -138,13 +158,16 @@ export async function createCompteRendu(input: PipelineInput): Promise<PipelineR
     const started = Date.now();
     const transcription = await transcribe(input.file);
     // Erreurs de transcription courantes corrigées dès maintenant, pour reconnaître aussi les absents.
-    raw = applyReplacements(transcription);
+    raw = applyReplacements(transcription, replacements);
     transcriptionPath = join(input.outDir, `${input.name}.transcription.txt`);
     writeFileSync(transcriptionPath, transcription + '\n', 'utf-8');
     log.info(`Transcription : ${transcriptionPath} (${Math.round((Date.now() - started) / 1000)} s).`);
   } else {
     raw = await extractTextFromFile(input.file);
   }
+  // Texte donné à l'IA (onglet « Transcription » de l'interface, et base des corrections).
+  const textPath = join(input.outDir, `${input.name}.texte.txt`);
+  writeFileSync(textPath, raw + '\n', 'utf-8');
   // « Absents : … » en tête des notes, ou dit au début de l'enregistrement.
   const extracted = extractAbsents(raw);
   const text = extracted.text;
@@ -162,7 +185,7 @@ export async function createCompteRendu(input: PipelineInput): Promise<PipelineR
   const jsonPath = join(input.outDir, `${input.name}.json`);
   // Corrections par le code, contrôles, puis JSON enregistré et rendu en PDF + PNG.
   const finish = async (answer: AiCompteRendu) => {
-    const ai = applyReplacements(answer);
+    const ai = applyReplacements(answer, replacements);
     for (const name of presence.unknown) ai.a_confirmer.push(`Absent non reconnu dans le groupe : ${name}`);
     for (const warning of checkCompteRendu(ai)) log.warn(`Contrôle : ${warning}`);
     for (const repetition of findRepetitions(ai)) log.warn(`Contrôle : répétition, ${repetition}.`);
@@ -178,8 +201,9 @@ export async function createCompteRendu(input: PipelineInput): Promise<PipelineR
   };
 
   input.onStep?.('redaction');
-  const conversation = startConversation(text, input);
   try {
+    const conversation = startConversation(input.directory, input.rules);
+    conversation.messages.push(...firstMessage(text, input));
     const first = await askModel(conversation, log);
     let result = await finish(first.ai);
     // Plus d'une page même réduit au minimum : un seul essai pour retirer les répétitions et raccourcir ;
@@ -214,7 +238,7 @@ export async function createCompteRendu(input: PipelineInput): Promise<PipelineR
       result = await finish(cleaned.cr);
       if (result.overflow) log.warn('Toujours trop long après raccourcissement : PDF sur 2 pages.');
     }
-    return { json: jsonPath, ...result, transcription: transcriptionPath, warnings };
+    return { json: jsonPath, ...result, transcription: transcriptionPath, text: textPath, warnings };
   } catch (err) {
     throw explainApiError(err);
   }

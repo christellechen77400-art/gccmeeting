@@ -13,6 +13,7 @@ const ICONS = {
   stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  up: '<path d="M12 19V5M5 12l7-7 7 7"/>',
 };
 const icon = (name) => `<svg aria-hidden="true" viewBox="0 0 24 24">${ICONS[name]}</svg>`;
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -392,7 +393,10 @@ function resetDraft() {
   draft.people = [...(config.groupes[draft.groupe] ?? [])];
 }
 
-// ---------- écran 2 (provisoire) : le compte-rendu ----------
+// ---------- écran 2 : aperçu et corrections ----------
+
+// État de l'écran ouvert : onglet du volet, corrections, demande en cours.
+let view = null; // { id, meta, tab, corrections, pending, error, whatsapp }
 
 async function showCompteRendu(id) {
   const screen = $('#screen');
@@ -406,27 +410,191 @@ async function showCompteRendu(id) {
   if (location.hash !== `#/cr/${id}`) return;
   setCat(meta.categorie);
   const line = [meta.categorie, meta.groupe, frDate(meta.date)].filter(Boolean).map(esc).join(' · ');
-  const head = `<a class="back" href="#/comptes-rendus">‹ Comptes-rendus</a>
-    <div class="head"><div><div class="svc"><i></i>${line}</div><h1>${esc(meta.titre || 'Compte-rendu en préparation')}</h1></div>`;
+  const head = `<div><a class="back" href="#/comptes-rendus">‹ Comptes-rendus</a>
+    <div class="svc"><i></i>${line}</div><h1 id="crtitle">${esc(meta.titre || 'Compte-rendu en préparation')}</h1></div>`;
   if (meta.etat === 'en_cours') {
-    screen.innerHTML = `${head}</div><section class="panel" style="max-width:420px">${stepsHtml({ meta }, AUDIO.includes(ext(meta.source.fichier)))}</section>`;
+    screen.innerHTML = `<div class="head">${head}</div><section class="panel" style="max-width:420px">${stepsHtml({ meta }, AUDIO.includes(ext(meta.source.fichier)))}</section>`;
     setTimeout(() => location.hash === `#/cr/${id}` && showCompteRendu(id), POLL_MS);
     return;
   }
   if (meta.etat === 'erreur') {
-    screen.innerHTML = `${head}</div><div class="error">${esc(meta.erreur)}</div>`;
+    screen.innerHTML = `<div class="head">${head}</div><div class="error">${esc(meta.erreur)}</div>`;
     return;
   }
-  const file = (meta.titre || 'compte-rendu').replace(/[\\/:*?"<>|]/g, '-');
-  const v = encodeURIComponent(meta.creeLe);
-  screen.innerHTML = `${head}
+  if (view?.id !== id) view = { id, tab: 'corriger', corrections: [], pending: null, error: null, whatsapp: null };
+  view.meta = meta;
+  screen.innerHTML = `<div class="head">${head}
       <div class="actions">
-        <a class="secondary" href="/api/comptes-rendus/${id}/cr.png" download="${esc(file)}.png">PNG</a>
-        <a class="primary" href="/api/comptes-rendus/${id}/cr.pdf" download="${esc(file)}.pdf">Télécharger le PDF</a>
+        <button class="secondary" id="whatsapp">Texte WhatsApp</button>
+        <a class="secondary" id="png" download>PNG</a>
+        <a class="primary" id="pdf" download>Télécharger le PDF</a>
       </div></div>
-    ${meta.overflow ? `<p class="hint">Le compte-rendu dépasse une page de ${meta.overflow} % même raccourci : le PDF fait 2 pages.</p>` : ''}
-    <div class="preview"><img src="/api/comptes-rendus/${id}/cr.png?v=${v}" alt="Aperçu du compte-rendu"></div>
-    <p class="small">Le volet « Corriger », la transcription et les détails arrivent à l'étape 3.</p>`;
+    <div id="wabox"></div>
+    <div class="cols">
+      <section class="preview" aria-label="Aperçu"><div id="overflow"></div><img id="crimg" alt="Aperçu du compte-rendu"></section>
+      <section class="panel side drawer" aria-label="Corrections">
+        <div class="tabs wide" role="tablist" aria-label="Volet">
+          ${[['corriger', 'Corriger'], ['transcription', 'Transcription'], ['details', 'Détails']].map(([t, label]) =>
+            `<button role="tab" data-drawer="${t}" aria-selected="${view.tab === t}">${label}</button>`).join('')}
+        </div>
+        <div id="drawer"></div>
+      </section>
+    </div>`;
+  $('#whatsapp').onclick = whatsapp;
+  for (const b of document.querySelectorAll('[data-drawer]')) b.onclick = () => { view.tab = b.dataset.drawer; showTab(); };
+  renderResult();
+  renderWhatsapp();
+  try {
+    view.corrections = await api(`/api/comptes-rendus/${id}/corrections`);
+  } catch (err) {
+    view.error = err.message;
+  }
+  showTab();
+}
+
+// Aperçu et liens de téléchargement, à jour après chaque correction.
+function renderResult() {
+  const { id, meta } = view;
+  const file = (meta.titre || 'compte-rendu').replace(/[\\/:*?"<>|]/g, '-');
+  const v = encodeURIComponent(meta.modifieLe ?? meta.creeLe);
+  $('#crtitle').textContent = meta.titre;
+  $('#png').href = `/api/comptes-rendus/${id}/cr.png?v=${v}`;
+  $('#png').download = `${file}.png`;
+  $('#pdf').href = `/api/comptes-rendus/${id}/cr.pdf?v=${v}`;
+  $('#pdf').download = `${file}.pdf`;
+  $('#crimg').src = `/api/comptes-rendus/${id}/cr.png?v=${v}`;
+  $('#overflow').innerHTML = meta.overflow
+    ? `<p class="hint warn">Le compte-rendu dépasse une page de ${meta.overflow} % : le PDF fait 2 pages. Demande de raccourcir dans « Corriger ».</p>` : '';
+}
+
+function showTab() {
+  for (const b of document.querySelectorAll('[data-drawer]')) b.setAttribute('aria-selected', b.dataset.drawer === view.tab);
+  if (view.tab === 'corriger') return renderChat();
+  if (view.tab === 'transcription') return renderTranscription();
+  return renderDetails();
+}
+
+function renderChat() {
+  const el = $('#drawer');
+  if (!el || view.tab !== 'corriger') return;
+  const bubbles = [`<div class="msg bot">Le compte-rendu est prêt. Dis-moi ce qu'il faut changer.</div>`];
+  view.corrections.forEach((c, i) => {
+    bubbles.push(`<div class="msg mine">${esc(c.demande)}</div>`);
+    let choice = '';
+    if (!c.choix) {
+      choice = `<span>Je retiens ça pour les prochains comptes-rendus ?</span>
+        ${c.resume ? `<span class="small">Règle proposée · ${esc(c.resume)}</span>` : ''}
+        <div class="choices"><button class="secondary sm" data-choix="ici" data-i="${i}">Seulement ici</button>
+          <button class="primary sm" data-choix="regle" data-i="${i}">Retenir comme règle</button></div>`;
+    }
+    bubbles.push(`<div class="msg bot">${esc(c.reponse)}${choice}</div>`);
+    if (c.choix === 'regle') bubbles.push(`<div class="msg rule"><b>Règle ajoutée</b> · ${esc(c.resumeRegle ?? c.resume ?? `Rédaction : ${c.demande}`)}</div>`);
+    if (c.choix === 'ici') bubbles.push('<div class="msg note">Corrigé seulement ici.</div>');
+  });
+  if (view.pending) {
+    bubbles.push(`<div class="msg mine">${esc(view.pending)}</div>`,
+      '<div class="msg bot typing"><i></i><i></i><i></i><span>Correction en cours, environ 30 secondes…</span></div>');
+  }
+  if (view.error) bubbles.push(`<div class="error">${esc(view.error)}</div>`);
+  el.innerHTML = `<div class="chat" id="chat">${bubbles.join('')}</div>
+    <form class="ask" id="ask"><label for="msg" class="sr">Correction demandée</label>
+      <input id="msg" placeholder="Demande une correction…" autocomplete="off" maxlength="2000" ${view.pending ? 'disabled' : ''}>
+      <button aria-label="Envoyer" ${view.pending ? 'disabled' : ''}>${icon('up')}</button></form>`;
+  const chat = $('#chat');
+  chat.scrollTop = chat.scrollHeight;
+  $('#ask').onsubmit = (e) => { e.preventDefault(); sendCorrection($('#msg').value.trim()); };
+  for (const b of el.querySelectorAll('[data-choix]')) b.onclick = () => choose(Number(b.dataset.i), b.dataset.choix);
+  if (!view.pending) $('#msg').focus({ preventScroll: true });
+}
+
+async function sendCorrection(demande) {
+  if (!demande || view.pending) return;
+  const current = view;
+  current.pending = demande;
+  current.error = null;
+  renderChat();
+  try {
+    const { meta, correction } = await api(`/api/comptes-rendus/${current.id}/corrections`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ demande }),
+    });
+    current.meta = meta;
+    current.corrections.push(correction);
+    if (view === current) renderResult();
+  } catch (err) {
+    current.error = err.message;
+  }
+  current.pending = null;
+  if (view === current) renderChat();
+}
+
+async function choose(i, choix) {
+  const current = view;
+  try {
+    const { correction, resume } = await api(`/api/comptes-rendus/${current.id}/corrections/${i}/choix`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ choix }),
+    });
+    current.corrections[i] = { ...current.corrections[i], ...correction, resumeRegle: resume };
+  } catch (err) {
+    current.error = err.message;
+  }
+  if (view === current) renderChat();
+}
+
+async function renderTranscription() {
+  const el = $('#drawer');
+  const audio = AUDIO.includes(ext(view.meta.source.fichier));
+  el.innerHTML = '<p class="hint">Chargement…</p>';
+  const res = await fetch(`/api/comptes-rendus/${view.id}/cr.texte.txt`);
+  if (view.tab !== 'transcription' || !$('#drawer')) return;
+  el.innerHTML = `<p class="hint">${audio ? 'Transcription automatique de l\'enregistrement (noms corrigés par les règles).' : 'Texte des notes, tel que l\'IA l\'a reçu.'}</p>
+    <pre class="text">${res.ok ? esc(await res.text()) : 'Texte introuvable.'}</pre>`;
+}
+
+async function renderDetails() {
+  const el = $('#drawer');
+  const { meta } = view;
+  const SOURCE = { fichier: 'Fichier déposé', notes: 'Notes collées', enregistrement: 'Enregistrement au micro' };
+  let cr = {};
+  try { cr = await (await fetch(`/api/comptes-rendus/${view.id}/cr.json?v=${encodeURIComponent(meta.modifieLe ?? '')}`)).json(); } catch { /* affiché sans */ }
+  if (view.tab !== 'details' || !$('#drawer')) return;
+  const when = (iso) => new Date(iso).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' });
+  const list = (items) => (items?.length ? `<ul>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<span class="small">Aucun</span>');
+  el.innerHTML = `<dl class="details">
+    <dt>Source</dt><dd>${esc(SOURCE[meta.source.type])}${meta.source.type === 'notes' ? '' : ` · ${esc(meta.source.nom)}`}</dd>
+    <dt>Créé le</dt><dd>${when(meta.creeLe)}</dd>
+    ${meta.modifieLe ? `<dt>Dernière correction</dt><dd>${when(meta.modifieLe)}</dd>` : ''}
+    <dt>Pages</dt><dd>${meta.overflow ? `2 (dépasse une page de ${meta.overflow} %)` : '1'}</dd>
+    <dt>Présents (${cr.participants?.length ?? 0})</dt><dd>${esc((cr.participants ?? []).join(', ')) || '<span class="small">Aucun groupe</span>'}</dd>
+    <dt>Absents (${cr.absents?.length ?? 0})</dt><dd>${esc((cr.absents ?? []).join(', ')) || '<span class="small">Aucun</span>'}</dd>
+    <dt>À confirmer</dt><dd>${list(cr.a_confirmer)}</dd>
+    <dt>Contrôles automatiques</dt><dd>${list(meta.avertissements)}</dd>
+  </dl>`;
+}
+
+// Texte court pour WhatsApp : copié dans le presse-papiers et affiché.
+async function whatsapp() {
+  const current = view;
+  try {
+    const { texte } = await api(`/api/comptes-rendus/${current.id}/whatsapp`);
+    let copied = false;
+    try { await navigator.clipboard.writeText(texte); copied = true; } catch { /* copie à la main */ }
+    current.whatsapp = { texte, copied };
+  } catch (err) {
+    current.whatsapp = { error: err.message };
+  }
+  if (view === current) renderWhatsapp();
+}
+
+function renderWhatsapp() {
+  const el = $('#wabox');
+  const wa = view.whatsapp;
+  if (!el) return;
+  if (!wa) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="panel wa">
+    <div class="wahead"><b>${wa.error ? esc(wa.error) : wa.copied ? 'Texte copié : colle-le dans WhatsApp.' : 'Sélectionne le texte et copie-le.'}</b>
+      <button class="x" id="waclose" aria-label="Fermer">${icon('x')}</button></div>
+    ${wa.texte ? `<textarea readonly id="watext">${esc(wa.texte)}</textarea>` : ''}</div>`;
+  $('#waclose').onclick = () => { view.whatsapp = null; renderWhatsapp(); };
 }
 
 // ---------- démarrage ----------

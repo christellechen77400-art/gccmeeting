@@ -7,9 +7,13 @@ import { extname, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { CATEGORIES } from '../categories.ts';
+import { correctCompteRendu, type CorrectionInput, type CorrectionResult } from '../correction.ts';
 import { SUPPORTED_EXTENSIONS } from '../extract.ts';
 import { createCompteRendu, type PipelineInput, type PipelineResult } from '../pipeline.ts';
+import { parseCompteRendu, render } from '../render.ts';
+import { describeRule } from '../rules.ts';
 import { AUDIO_EXTENSIONS } from '../transcribe.ts';
+import { whatsappText } from '../whatsapp.ts';
 import { defaultDataDir, Store, type Meta, type Source } from './store.ts';
 
 const PUBLIC_DIR = fileURLToPath(new URL('./public/', import.meta.url));
@@ -25,11 +29,15 @@ const RESULT_FILES: Record<string, string> = {
   'cr.png': 'image/png',
   'cr.pdf': 'application/pdf',
   'cr.json': 'application/json; charset=utf-8',
+  'cr.texte.txt': 'text/plain; charset=utf-8', // texte donné à l'IA : notes ou transcription
 };
+const MAX_JSON = 100_000; // corps JSON d'une requête de l'interface, en octets
+const MAX_REQUEST = 2000; // caractères d'une demande de correction
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export const APP_HEADER = 'x-gcc-meeting'; // envoyé par l'interface pour toute modification
 
 type Pipeline = (input: PipelineInput) => Promise<PipelineResult>;
+type Corrector = (input: CorrectionInput) => Promise<CorrectionResult>;
 
 class HttpError extends Error {
   constructor(readonly status: number, message: string) { super(message); }
@@ -45,6 +53,19 @@ function sendFile(res: ServerResponse, path: string, type: string): void {
   createReadStream(path).pipe(res);
 }
 
+async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
+  let body = '';
+  for await (const chunk of req) {
+    body += chunk;
+    if (body.length > MAX_JSON) throw new HttpError(413, 'Requête trop grande.');
+  }
+  try {
+    const value = JSON.parse(body) as unknown;
+    if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
+  } catch { /* message ci-dessous */ }
+  throw new HttpError(400, 'Requête mal formée.');
+}
+
 function nameList(value: FormDataEntryValue | null): string[] {
   if (!value) return [];
   const list = JSON.parse(String(value)) as unknown;
@@ -52,9 +73,14 @@ function nameList(value: FormDataEntryValue | null): string[] {
   return list.map((n) => n.trim()).filter(Boolean);
 }
 
-export function createApp(options: { dataDir?: string; pipeline?: Pipeline } = {}): Server {
+// Résumé lisible de la règle proposée, pour l'interface.
+const describe = (regle: CorrectionResult['regle']) => (regle ? { resume: describeRule(regle) } : {});
+
+export function createApp(options: { dataDir?: string; pipeline?: Pipeline; corrector?: Corrector } = {}): Server {
   const store = new Store(options.dataDir ?? defaultDataDir());
   const pipeline = options.pipeline ?? createCompteRendu;
+  const corrector = options.corrector ?? correctCompteRendu;
+  const correcting = new Set<string>(); // une correction à la fois par compte-rendu
   store.markInterrupted();
 
   // Création lancée en tâche de fond : l'interface suit l'avancement en relisant l'état.
@@ -70,6 +96,7 @@ export function createApp(options: { dataDir?: string; pipeline?: Pipeline } = {
         directory: store.directory(),
         meetingDate: meta.date,
         titre: meta.titre,
+        rules: store.rules(),
         outDir: folder,
         name: 'cr',
         onStep: (etape) => store.update(meta.id, { etape }),
@@ -135,6 +162,59 @@ export function createApp(options: { dataDir?: string; pipeline?: Pipeline } = {
     return meta;
   }
 
+  // Volet « Corriger » : l'IA modifie le JSON, puis PDF et PNG sont refaits.
+  async function correct(meta: Meta, demande: string) {
+    if (meta.etat !== 'pret') throw new HttpError(409, 'Le compte-rendu n\'est pas prêt.');
+    if (correcting.has(meta.id)) throw new HttpError(409, 'Une correction est déjà en cours.');
+    correcting.add(meta.id);
+    try {
+      const folder = store.folder(meta.id)!;
+      const json = join(folder, 'cr.json');
+      const textPath = join(folder, 'cr.texte.txt');
+      const result = await corrector({
+        cr: parseCompteRendu(readFileSync(json, 'utf-8')),
+        demande,
+        text: existsSync(textPath) ? readFileSync(textPath, 'utf-8') : undefined,
+        directory: store.directory(),
+        rules: store.rules(),
+      }).catch((err: Error) => { throw new HttpError(502, err.message); });
+      writeFileSync(json, JSON.stringify(result.cr, null, 2) + '\n', 'utf-8');
+      const { overflow } = await render(json, folder);
+      const updated = store.update(meta.id, {
+        titre: result.cr.titre,
+        presents: result.cr.participants ?? [],
+        absents: result.cr.absents ?? [],
+        overflow,
+        avertissements: result.warnings,
+        modifieLe: new Date().toISOString(),
+      });
+      const reponse = result.message + (overflow ? ` Attention : il dépasse maintenant une page de ${overflow} % (PDF sur 2 pages).` : '');
+      const corrections = store.corrections(meta.id);
+      const correction = { demande, reponse, date: updated.modifieLe!, ...(result.regle && { regle: result.regle }) };
+      store.saveCorrections(meta.id, [...corrections, correction]);
+      return { meta: updated, index: corrections.length, correction: { ...correction, ...describe(correction.regle) } };
+    } finally {
+      correcting.delete(meta.id);
+    }
+  }
+
+  // « Seulement ici » ou « Retenir comme règle » ; sans règle proposée, la demande devient une consigne de rédaction.
+  function choose(meta: Meta, index: number, choix: unknown) {
+    if (choix !== 'ici' && choix !== 'regle') throw new HttpError(400, 'Choix inconnu.');
+    const corrections = store.corrections(meta.id);
+    const correction = corrections[index];
+    if (!correction) throw new HttpError(404, 'Correction introuvable.');
+    if (correction.choix) throw new HttpError(409, 'Choix déjà fait.');
+    correction.choix = choix;
+    let regle;
+    if (choix === 'regle') {
+      regle = store.addRule(correction.regle ?? { type: 'redaction', texte: correction.demande }, meta.titre);
+      correction.regleId = regle.id;
+    }
+    store.saveCorrections(meta.id, corrections);
+    return { correction, ...(regle && { regle, resume: describeRule(regle) }) };
+  }
+
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     // Usage local sans compte : un autre site ouvert dans le navigateur ne doit ni lire les données
     // (nom d'hôte détourné, « DNS rebinding ») ni lancer un compte-rendu (formulaire envoyé en douce).
@@ -158,14 +238,31 @@ export function createApp(options: { dataDir?: string; pipeline?: Pipeline } = {
 
     if (req.method === 'POST' && path === '/api/comptes-rendus') return sendJson(res, 201, await create(req));
 
-    const m = /^\/api\/comptes-rendus\/([^/]+)(?:\/([^/]+))?$/.exec(path);
-    if (req.method === 'GET' && m) {
+    const m = /^\/api\/comptes-rendus\/([^/]+)(?:\/(.+))?$/.exec(path);
+    if (m) {
       const meta = store.read(m[1]);
       if (!meta) throw new HttpError(404, 'Compte-rendu introuvable.');
-      if (!m[2]) return sendJson(res, 200, meta);
-      const file = join(store.folder(meta.id)!, m[2]);
-      if (!RESULT_FILES[m[2]] || !existsSync(file)) throw new HttpError(404, 'Fichier introuvable.');
-      return sendFile(res, file, RESULT_FILES[m[2]]);
+      const folder = store.folder(meta.id)!;
+      const rest = m[2];
+      if (req.method === 'GET' && !rest) return sendJson(res, 200, meta);
+      if (req.method === 'GET' && rest === 'whatsapp') {
+        return sendJson(res, 200, { texte: whatsappText(parseCompteRendu(readFileSync(join(folder, 'cr.json'), 'utf-8'))) });
+      }
+      if (req.method === 'GET' && rest === 'corrections') {
+        return sendJson(res, 200, store.corrections(meta.id).map((c) => ({ ...c, ...describe(c.regle) })));
+      }
+      if (req.method === 'POST' && rest === 'corrections') {
+        const demande = String((await readJson(req)).demande ?? '').trim();
+        if (!demande) throw new HttpError(400, 'Écris ce qu\'il faut corriger.');
+        if (demande.length > MAX_REQUEST) throw new HttpError(400, `Demande trop longue (${MAX_REQUEST} caractères au plus).`);
+        return sendJson(res, 200, await correct(meta, demande));
+      }
+      const choice = /^corrections\/(\d+)\/choix$/.exec(rest ?? '');
+      if (req.method === 'POST' && choice) return sendJson(res, 200, choose(meta, Number(choice[1]), (await readJson(req)).choix));
+      if (req.method === 'GET' && rest && RESULT_FILES[rest] && existsSync(join(folder, rest))) {
+        return sendFile(res, join(folder, rest), RESULT_FILES[rest]);
+      }
+      throw new HttpError(404, 'Fichier introuvable.');
     }
 
     throw new HttpError(404, 'Page introuvable.');

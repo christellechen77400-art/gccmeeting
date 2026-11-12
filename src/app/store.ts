@@ -1,13 +1,15 @@
-// Données de l'interface, dans data/ (exclu de git) : annuaire, groupes et comptes-rendus.
-// Au premier lancement, l'annuaire et les groupes sont repris de config/.
+// Données de l'interface, dans data/ (exclu de git) : annuaire, groupes, règles apprises et comptes-rendus.
+// Au premier lancement, l'annuaire et les groupes sont repris de config/, les règles de src/remplacements.json.
 
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Step } from '../pipeline.ts';
+import { rulesFromReplacements, type Rule, type RuleFields } from '../rules.ts';
 
 const CONFIG_DIR = fileURLToPath(new URL('../../config/', import.meta.url));
+const REPLACEMENTS = fileURLToPath(new URL('../remplacements.json', import.meta.url));
 const ID = /^[0-9]{8}-[0-9]{6}-[0-9a-f]{4}$/;
 
 export type Source = 'fichier' | 'notes' | 'enregistrement';
@@ -27,6 +29,17 @@ export interface Meta {
   erreur?: string;
   overflow?: number;
   avertissements?: string[];
+  modifieLe?: string; // ISO, dernière correction
+}
+
+// Une demande du volet « Corriger » et sa réponse ; `choix` une fois la règle retenue ou non.
+export interface Correction {
+  demande: string;
+  reponse: string;
+  date: string; // ISO
+  regle?: RuleFields; // règle proposée par l'IA
+  choix?: 'ici' | 'regle';
+  regleId?: string; // règle créée
 }
 
 export function defaultDataDir(): string {
@@ -39,14 +52,43 @@ export class Store {
     for (const name of ['annuaire.json', 'groupes.json']) {
       if (!existsSync(join(dir, name))) copyFileSync(join(CONFIG_DIR, name), join(dir, name));
     }
+    if (!existsSync(join(dir, 'regles.json'))) {
+      const replacements = JSON.parse(readFileSync(REPLACEMENTS, 'utf-8')) as Record<string, string>;
+      this.saveRules(rulesFromReplacements(replacements, new Date().toISOString()));
+    }
+  }
+
+  private readJson<T>(name: string): T {
+    return JSON.parse(readFileSync(join(this.dir, name), 'utf-8')) as T;
+  }
+
+  private writeJson(name: string, value: unknown): void {
+    writeFileSync(join(this.dir, name), JSON.stringify(value, null, 2) + '\n', 'utf-8');
   }
 
   directory(): string[] {
-    return JSON.parse(readFileSync(join(this.dir, 'annuaire.json'), 'utf-8')) as string[];
+    return this.readJson('annuaire.json');
   }
 
   groups(): Record<string, string[]> {
-    return JSON.parse(readFileSync(join(this.dir, 'groupes.json'), 'utf-8')) as Record<string, string[]>;
+    return this.readJson('groupes.json');
+  }
+
+  rules(): Rule[] {
+    return this.readJson('regles.json');
+  }
+
+  saveRules(rules: Rule[]): void {
+    this.writeJson('regles.json', rules);
+  }
+
+  // Ajoute une règle et la renvoie (identifiant r1, r2… jamais réutilisé).
+  addRule(fields: RuleFields, origine?: string): Rule {
+    const rules = this.rules();
+    const next = Math.max(0, ...rules.map((r) => Number(r.id.slice(1)) || 0)) + 1;
+    const rule: Rule = { id: `r${next}`, ...fields, actif: true, creeLe: new Date().toISOString(), ...(origine && { origine }) };
+    this.saveRules([...rules, rule]);
+    return rule;
   }
 
   // Identifiant lisible et trié par date : 20261112-160512-a3f9.
@@ -78,6 +120,15 @@ export class Store {
     const meta = { ...this.read(id)!, ...change };
     this.write(meta);
     return meta;
+  }
+
+  corrections(id: string): Correction[] {
+    const path = join(this.folder(id)!, 'corrections.json');
+    return existsSync(path) ? JSON.parse(readFileSync(path, 'utf-8')) as Correction[] : [];
+  }
+
+  saveCorrections(id: string, corrections: Correction[]): void {
+    writeFileSync(join(this.folder(id)!, 'corrections.json'), JSON.stringify(corrections, null, 2) + '\n', 'utf-8');
   }
 
   list(): Meta[] {

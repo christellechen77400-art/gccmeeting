@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { createApp } from '../src/app/server.ts';
 import { Store } from '../src/app/store.ts';
+import type { CorrectionInput } from '../src/correction.ts';
 import type { PipelineInput } from '../src/pipeline.ts';
 import { render } from '../src/render.ts';
 
@@ -16,16 +17,36 @@ async function fakePipeline(input: PipelineInput) {
   if (readFileSync(input.file, 'utf-8').includes('ÉCHEC')) throw new Error('Clé API refusée');
   const cr = JSON.parse(readFileSync('exemples/musiciens.json', 'utf-8'));
   const json = join(input.outDir, `${input.name}.json`);
-  writeFileSync(json, JSON.stringify({ ...cr, titre: input.titre ?? cr.titre, participants: input.members, absents: input.absents }));
+  writeFileSync(json, JSON.stringify({
+    ...cr, titre: input.titre ?? cr.titre, date: input.meetingDate, categorie: input.categorie, sous_titre: input.groupe,
+    participants: input.members, absents: input.absents,
+  }));
+  const text = join(input.outDir, `${input.name}.texte.txt`);
+  writeFileSync(text, readFileSync(input.file, 'utf-8'));
   input.onStep?.('mise_en_page');
-  return { json, ...(await render(json, input.outDir)), warnings: [] };
+  return { json, text, ...(await render(json, input.outDir)), warnings: [] };
 }
 const calls: PipelineInput[] = [];
 const APP = { 'X-GCC-Meeting': '1' };
 
+// Correction factice : « Davidson » devient David S. dans le titre, avec une règle « nom » proposée ;
+// une demande « fait » ne propose pas de règle ; « PANNE » échoue.
+async function fakeCorrector(input: CorrectionInput) {
+  corrections.push(input);
+  if (input.demande === 'PANNE') throw new Error('Pas de connexion à l\'API');
+  const named = input.demande.includes('Davidson');
+  return {
+    cr: { ...input.cr, titre: named ? 'Réunion avec David S.' : 'Réunion corrigée', absents: ['Esther C.', 'Eva Y.'] },
+    message: 'C\'est corrigé dans le titre.',
+    ...(named && { regle: { type: 'nom' as const, de: 'Davidson', vers: 'David S.' } }),
+    warnings: ['Contrôle : essai'],
+  };
+}
+const corrections: CorrectionInput[] = [];
+
 async function start() {
   const dir = mkdtempSync(join(tmpdir(), 'gccmeeting-app-'));
-  const server = createApp({ dataDir: dir, pipeline: fakePipeline }).listen(0, '127.0.0.1');
+  const server = createApp({ dataDir: dir, pipeline: fakePipeline, corrector: fakeCorrector }).listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   return { dir, server, base };
@@ -151,6 +172,85 @@ test('interface : un autre site ne peut ni lire les données ni lancer un compte
     });
     assert.equal(status, 403);
     assert.equal((await fetch(`http://localhost:${port}/api/config`)).status, 200);
+  } finally {
+    server.close();
+  }
+});
+
+async function createFromNotes(base: string, notes = 'Davidson présente le planning') {
+  const form = new FormData();
+  form.append('categorie', 'Culte Franco');
+  form.append('groupe', 'Musiciens');
+  form.append('date', '2026-11-09');
+  form.append('presents', JSON.stringify(['Jonathan Z.', 'Eva Y.']));
+  form.append('absents', JSON.stringify(['Esther C.']));
+  form.append('notes', notes);
+  const { id } = await (await fetch(`${base}/api/comptes-rendus`, { method: 'POST', body: form, headers: APP })).json();
+  return waitReady(base, id);
+}
+
+const postJson = (url: string, body: unknown) =>
+  fetch(url, { method: 'POST', body: JSON.stringify(body), headers: { ...APP, 'Content-Type': 'application/json' } });
+
+test('écran 2 : correction, règle retenue ou non, transcription, texte WhatsApp', async () => {
+  const { server, base, dir } = await start();
+  try {
+    // Règles de départ : src/remplacements.json, toutes actives, données à la chaîne.
+    const meta = await createFromNotes(base);
+    const start = JSON.parse(readFileSync('src/remplacements.json', 'utf-8'));
+    assert.deepEqual(Object.fromEntries(calls.at(-1)!.rules!.map((r) => [r.de, r.vers])), start);
+    const url = `${base}/api/comptes-rendus/${meta.id}`;
+    assert.equal(await (await fetch(`${url}/cr.texte.txt`)).text(), 'Davidson présente le planning\n');
+
+    // Correction avec règle proposée : JSON modifié, PDF/PNG refaits, état mis à jour.
+    const pngBefore = readFileSync(join(dir, 'comptes-rendus', meta.id, 'cr.png'));
+    const res = await postJson(`${url}/corrections`, { demande: '« Davidson », c\'est David S.' });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.index, 0);
+    assert.equal(body.correction.reponse, 'C\'est corrigé dans le titre.');
+    assert.equal(body.correction.resume, 'Nom : « Davidson » → David S.');
+    assert.equal(body.meta.titre, 'Réunion avec David S.');
+    assert.deepEqual(body.meta.absents, ['Esther C.', 'Eva Y.']);
+    assert.deepEqual(body.meta.avertissements, ['Contrôle : essai']);
+    assert.ok(body.meta.modifieLe);
+    const input = corrections.at(-1)!;
+    assert.equal(input.text, 'Davidson présente le planning\n');
+    assert.equal(input.cr.categorie, 'Culte Franco');
+    assert.equal(JSON.parse(readFileSync(join(dir, 'comptes-rendus', meta.id, 'cr.json'), 'utf-8')).titre, 'Réunion avec David S.');
+    assert.notDeepEqual(readFileSync(join(dir, 'comptes-rendus', meta.id, 'cr.png')), pngBefore);
+
+    // « Retenir comme règle » : règle « nom » ajoutée, active, avec le titre d'origine ; un seul choix possible.
+    const chosen = await (await postJson(`${url}/corrections/0/choix`, { choix: 'regle' })).json();
+    assert.equal(chosen.resume, 'Nom : « Davidson » → David S.');
+    const rules = JSON.parse(readFileSync(join(dir, 'regles.json'), 'utf-8'));
+    assert.deepEqual(rules.at(-1), { ...chosen.regle, type: 'nom', de: 'Davidson', vers: 'David S.', actif: true, origine: 'Réunion avec David S.' });
+    assert.equal((await postJson(`${url}/corrections/0/choix`, { choix: 'ici' })).status, 409);
+
+    // Sans règle proposée : « Seulement ici » n'ajoute rien ; « Retenir » ferait une consigne de rédaction.
+    await postJson(`${url}/corrections`, { demande: 'Le fait est faux' });
+    assert.equal((await (await postJson(`${url}/corrections/1/choix`, { choix: 'ici' })).json()).correction.choix, 'ici');
+    await postJson(`${url}/corrections`, { demande: 'Toujours écrire l\'année' });
+    const style = await (await postJson(`${url}/corrections/2/choix`, { choix: 'regle' })).json();
+    assert.equal(style.resume, 'Rédaction : Toujours écrire l\'année');
+    assert.equal(JSON.parse(readFileSync(join(dir, 'regles.json'), 'utf-8')).length, rules.length + 1);
+    const history = await (await fetch(`${url}/corrections`)).json();
+    assert.deepEqual(history.map((c: { choix: string }) => c.choix), ['regle', 'ici', 'regle']);
+
+    // Erreurs : demande vide, IA en panne (rien n'est modifié), choix inconnu, sans en-tête.
+    assert.equal((await (await postJson(`${url}/corrections`, { demande: ' ' })).json()).erreur, 'Écris ce qu\'il faut corriger.');
+    const broken = await postJson(`${url}/corrections`, { demande: 'PANNE' });
+    assert.equal(broken.status, 502);
+    assert.match((await broken.json()).erreur, /connexion/);
+    assert.equal((await (await fetch(`${url}/corrections`)).json()).length, 3);
+    assert.equal((await postJson(`${url}/corrections/9/choix`, { choix: 'regle' })).status, 404);
+    assert.equal((await postJson(`${url}/corrections/1/choix`, { choix: 'tout' })).status, 400);
+    assert.equal((await fetch(`${url}/corrections`, { method: 'POST', body: '{"demande":"x"}' })).status, 403);
+
+    // Texte WhatsApp du compte-rendu corrigé.
+    const { texte } = await (await fetch(`${url}/whatsapp`)).json();
+    assert.ok(texte.startsWith('*Réunion corrigée*\nCulte Franco · Musiciens · 9 novembre 2026\n'));
+    assert.match(texte, /\*À retenir\*\n1\. /);
   } finally {
     server.close();
   }

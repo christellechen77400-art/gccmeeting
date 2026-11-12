@@ -2,6 +2,17 @@
 
 À mettre à jour à la fin de chaque conversation (Claude ou Claude Code). Le plus récent en haut.
 
+## 12/11/2026 — Claude Code, Mission 6, étape 3 : écran « Aperçu et corrections »
+**Fait** (branche `mission-6-interface`, pas fusionnée ; étapes enchaînées sans attendre les tests, à la demande de Christelle)
+- En-tête : catégorie · groupe · date, titre, boutons « Texte WhatsApp » (copié + affiché), « PNG », « Télécharger le PDF ».
+- Aperçu PNG à gauche, rafraîchi après chaque correction ; dépassement d'une page signalé.
+- Volet « Corriger » : discussion avec l'IA (`src/correction.ts`, consigne `src/correction.md`) ; après chaque correction, « Seulement ici » ou « Retenir comme règle » (nom → remplacement, consigne → règle de rédaction, mot → glossaire) ; « Règle ajoutée · … » s'affiche ; l'historique est gardé (`corrections.json` du compte-rendu).
+- Onglets « Transcription » (texte donné à l'IA, `cr.texte.txt`) et « Détails » (source, dates, pages, présents, absents, à confirmer, contrôles).
+- Règles apprises : `data/regles.json` (départ : `src/remplacements.json`), données à l'IA à chaque compte-rendu et à chaque correction (`src/rules.ts`).
+- Tests : `npm test` → 39 OK ; `npm run typecheck` → sans erreur.
+- Navigateur (Chromium piloté) : parcours complet avec une IA factice (création, 2 corrections, règle retenue, « Seulement ici », WhatsApp, onglets, rechargement, PDF) ; puis un essai réel DeepSeek : notes musiciens → compte-rendu, correction « MD à tester pendant les ateliers » appliquée dans la bonne carte, « Davidson » → règle « nom » proposée.
+- Défaut corrigé après l'essai réel : l'IA disait « j'ai enregistré la règle » avant le choix de Christelle (consigne précisée).
+
 ## 12/11/2026 — Claude Code, Mission 6, ajustements de l'étape 1 et étape 2 : écran « Nouveau compte-rendu »
 **Ajustements de l'étape 1** (validée par Christelle)
 - Fichier parasite `.env.` supprimé ; `.gitignore` ignore tous les `.env*` sauf `.env.example`.
