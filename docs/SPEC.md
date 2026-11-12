@@ -4,12 +4,16 @@ Statut : version 0.1 (10/11/2026). Interface (UI/UX) en cours de validation dans
 
 ## 1. Fonctionnement attendu (100 % automatique)
 
+> **Pour l'instant (décision du 12/11/2026)** : on teste en local, avec dépôt du fichier dans l'interface ; aujourd'hui, en ligne de commande :
+> `npm run cr -- <fichier> --categorie "<Catégorie>" [--groupe "<Groupe>"]`.
+> Le dépôt dans Google Drive (mission 4) et la mise en ligne (mission 5) sont reportés : les étapes 1, 2, 6, 7 et 8 ci-dessous viendront avec elles.
+
 1. Christelle (ou un référent) dépose un fichier dans un sous-dossier Drive du compte GCC Franco :
    `GCCMeeting/À traiter/<Catégorie>/`
    avec `<Catégorie>` = `GCC`, `Culte Franco`, `EDD`, `DA`, `Campus GCC`, `Autre`.
 2. Toutes les quelques minutes, GCCMeeting repère les nouveaux fichiers.
 3. Selon le type de fichier :
-   - **audio** (m4a, mp3, wav…) → transcription (Groq, Whisper large-v3 turbo, français) ;
+   - **audio** (m4a, mp3, wav, webm, mp4, ogg) → transcription (Groq, `whisper-large-v3-turbo`, français), enregistrée telle quelle dans `out/<nom>.transcription.txt` pour pouvoir la relire. La phrase « absents : … » dite au début de l'enregistrement retire ces personnes du groupe, comme la ligne « Absents : » des notes. Les erreurs de transcription courantes sont corrigées par `src/remplacements.json` ;
    - **PDF**, **Google Doc**, **.txt** → extraction du texte.
 4. Le texte est envoyé à l'IA (DeepSeek, `deepseek-flash` par défaut) avec le modèle de compte-rendu et le glossaire. L'IA renvoie un JSON structuré (voir §4).
 5. Le JSON remplit le modèle HTML (`docs/TEMPLATE.md`) → export **PDF A4 portrait** + **PNG** (pour iPhone / WhatsApp).
@@ -34,7 +38,7 @@ Le détail des écrans sera fixé dans l'artefact UI/UX.
 ## 3. Technique (proposition)
 - Application Node.js (TypeScript) hébergée sur **Google Cloud Run** (projet du compte GCC Franco), déclenchée par **Cloud Scheduler** toutes les 5 minutes.
 - Accès Drive et Gmail via l'API Google (compte GCC Franco).
-- Transcription : **Groq** (free tier ≈ 8 h d'audio / jour). Compresser l'audio (ffmpeg, mono, 16 kHz) si le fichier dépasse la limite de taille.
+- Transcription : **Groq** (free tier ≈ 8 h d'audio / jour), appel direct à l'API (`fetch`, sans paquet). Au-delà de 25 Mo (limite d'une pièce jointe chez Groq), l'audio est compressé avec ffmpeg (mono, 16 kHz, 32 kbit/s, MP3) ; s'il dépasse encore, il est découpé en morceaux et les textes sont recollés dans l'ordre (un mot peut être coupé à la jonction). ffmpeg manquant : `brew install ffmpeg`.
 - Résumé : **DeepSeek**, par son API compatible Anthropic (SDK officiel `@anthropic-ai/sdk`, adresse dans `ANTHROPIC_BASE_URL`). Modèle `deepseek-flash` par défaut (plus fidèle et plus court que `deepseek-v4-pro` lors du comparatif du 11/11/2026, température 0,2), `deepseek-v4-pro` en option. DeepSeek ne gère pas la sortie structurée : l'IA répond en appelant un outil forcé `enregistrer_compte_rendu` (format §4), sans mode réflexion ; le JSON est validé, avec un seul nouvel essai en cas d'erreur.
 - Rendu : HTML/CSS du modèle → PDF et PNG avec Playwright (Chromium).
 - Aucun audio stocké côté application : téléchargement temporaire, puis suppression.
