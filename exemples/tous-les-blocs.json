@@ -18,10 +18,9 @@
      ]},
     {"type": "intertitre", "titre": "2027", "sous_titre": "Thème, accompagnement, EDD et campus"},
     {"type": "objectif", "sous_titre": "Thème 2027 · Franco", "titre": "Communion fraternelle, vie et croissance spirituelle",
-     "titre_etapes": "Deux piliers",
      "elements": [
-       {"texte": "Prière : portée par Jonathan, Stéphane et Christelle, avec les teams fixes."},
-       {"texte": "Louange : d'abord entre nous, puis on la partage à l'église."}
+       {"titre": "Prière", "texte": "Portée par Jonathan, Stéphane et Christelle, avec les teams fixes.", "picto": "hands"},
+       {"titre": "Louange", "texte": "D'abord entre nous, puis on la partage à l'église.", "picto": "music"}
      ]},
     {"type": "decisions", "titre": "Décisions",
      "elements": [

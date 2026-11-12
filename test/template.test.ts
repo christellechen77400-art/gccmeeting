@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import { CATEGORIES } from '../src/categories.ts';
+import { render } from '../src/render.ts';
 import { formatDate, renderHtml } from '../src/template.ts';
 
 test('les 6 catégories du modèle ont leur couleur, leur nom et leur sous-titre', () => {
@@ -53,4 +57,13 @@ test('blocs vides non affichés, « À retenir » limité à 3 points', () => {
   });
   assert.ok(!html.includes('Rien de neuf'));
   assert.ok(html.includes('Point 3') && !html.includes('Point 4'));
+});
+
+test('rendu : dépassement d\'une page mesuré (0 si ça tient), PNG d\'une seule image en hauteur', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'gccmeeting-'));
+  assert.equal((await render('exemples/musiciens.json', dir)).overflow, 0);
+  const long = await render('exemples/tous-les-blocs.json', dir);
+  assert.ok(long.overflow > 0, `dépassement : ${long.overflow} %`);
+  // Hauteur lue dans l'en-tête PNG (×2) : plus haute qu'une page A4, donc une seule image, sans coupure.
+  assert.ok(readFileSync(long.png).readUInt32BE(20) > 2 * 1123);
 });
