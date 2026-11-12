@@ -7,21 +7,37 @@ import { CATEGORIES } from '../src/categories.ts';
 import { render } from '../src/render.ts';
 import { formatDate, renderHtml } from '../src/template.ts';
 
-test('les 6 catégories du modèle ont leur couleur, leur nom et leur sous-titre', () => {
+test('les 6 catégories ont la couleur de service de la charte GCC, leur nom et leur sous-titre', () => {
   const expected: Record<string, [string, string, string]> = {
-    'GCC': ['#B4552F', 'GCC', 'Coordination'],
-    'Culte Franco': ['#5E7487', 'Culte Franco', 'Louange'],
-    'EDD': ['#6E7B5C', 'EDD', 'École du dimanche'],
-    'DA': ['#A86A7A', 'DA', 'Direction artistique'],
-    'Campus GCC': ['#C48A3A', 'Campus', 'GCC'],
-    'Autre': ['#8C7B6B', 'Autre', 'Sujet libre'],
+    'GCC': ['#cf2a20', 'GCC', 'Coordination'],
+    'Culte Franco': ['#2d5a65', 'Culte Franco', 'Louange'],
+    'EDD': ['#3b6d11', 'EDD', 'École du dimanche'],
+    'DA': ['#9d3c63', 'DA', 'Direction artistique'],
+    'Campus GCC': ['#2471a3', 'Campus GCC', 'GCC'],
+    'Autre': ['#6c6c72', 'Autre', 'Sujet libre'],
   };
   assert.deepEqual(Object.keys(CATEGORIES).sort(), Object.keys(expected).sort());
   for (const [name, [color, label, subtitle]] of Object.entries(expected)) {
     const html = renderHtml({ titre: 'T', date: '2026-11-09', categorie: name });
     assert.ok(html.includes(`--cat:${color}`), name);
-    assert.ok(html.includes(`<b>${label}</b><span>${subtitle}</span>`), name);
+    assert.ok(html.includes(`<i class="dot"></i>${label} · ${subtitle}</div>`), name);
   }
+  // Sous-titre donné (le groupe de la réunion) : il remplace celui par défaut.
+  assert.ok(renderHtml({ titre: 'T', date: '2026-11', categorie: 'Culte Franco', sous_titre: 'Musiciens' })
+    .includes('<i class="dot"></i>Culte Franco · Musiciens</div>'));
+});
+
+test('charte GCC : signature GCC Meeting, « À retenir » teinté et numéroté, objectif en couleur pleine', () => {
+  const html = renderHtml({
+    titre: 'T', date: '2026-11', a_retenir: [{ titre: 'Un' }, { titre: 'Deux' }],
+    blocs: [{ type: 'objectif', titre: 'But' }, { type: 'cartes', titre: 'Sujets', elements: [{ titre: 'A' }] }],
+  });
+  assert.ok(html.includes('<img src="data:image/png;base64,') && html.includes('GCC <span>Meeting</span>'));
+  assert.ok(html.includes('<div class="panel tint">'));
+  assert.ok(html.includes('<span class="num">1</span><div><b>Un</b>') && html.includes('<span class="num">2</span><div><b>Deux</b>'));
+  assert.ok(html.includes('.goal{background:var(--cat)'));
+  assert.ok(html.includes('<h2 class="sec">Sujets</h2>'));
+  assert.ok(html.includes('font-family:"Inter"'));
 });
 
 test('dates : jour précis ou mois seul', () => {

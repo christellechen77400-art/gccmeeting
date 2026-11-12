@@ -2,6 +2,26 @@
 
 À mettre à jour à la fin de chaque conversation (Claude ou Claude Code). Le plus récent en haut.
 
+## 12/11/2026 — Claude Code, Mission 6 (interface locale), étape 1 : rendu à la charte GCC
+**Fait** (branche `mission-6-interface`, pas fusionnée)
+- `src/template.ts` refait d'après `reference/exemple-cr-musiciens-charte-gcc.html` :
+  - fond gris clair, cartes blanches arrondies avec ombre légère, signature logo GCC + « GCC **Meeting** » ;
+  - couleur de la catégorie (`src/categories.ts`, couleurs de service de `docs/TEMPLATE.md`) : point + « Catégorie · Groupe », halo flou, « À retenir » teinté avec numéros en pastilles pleines, puces, année de l'intertitre, petite barre devant les intertitres, objectif en fond plein, pictos dans un rond teinté ;
+  - participants en pastilles blanches sous le titre, absents barrés ;
+  - l'ancien bandeau brun et sa pastille de catégorie disparaissent (le champ `picto` des catégories, devenu inutile, est retiré).
+- Police Inter intégrée (`fonts/`, woff2, licence OFL) ; Caladea et Carlito retirées.
+- `npm run cr` met le groupe (`--groupe`) dans `sous_titre`, affiché à côté de la catégorie.
+- Règle d'une page inchangée (réduction jusqu'à 80 %, relance « trop long », sinon 2 pages). Espacements de la référence réduits d'environ 10 % pour garder les essais sur une page.
+- Mesures sur les JSON déjà produits (aucun appel à l'IA) : exemple musiciens validé 1 page (100 %) ; essai GCC `gcc-flash` 1 page (80 %) ; essai musiciens `musiciens-flash` 6 % de trop (4 % avec l'ancienne charte), donc 2 pages sans relance. PNG dans `essais/charte-gcc-*.png`.
+- PDF vérifié : halo, chinois (高班) et 2e page corrects.
+- Tests : `npm test` → 32 tests OK ; `npm run typecheck` → sans erreur.
+
+**Pas encore vérifié**
+- Un nouveau compte-rendu complet avec l'IA (relance « trop long » comprise) dans la nouvelle charte.
+
+**Reste à faire**
+- Étapes 2 à 5 de la mission 6 (écrans de l'interface).
+
 ## 12/11/2026 — Claude Code, Mission 3 : un fichier audio vers le compte-rendu
 **Fait** (branche `mission-3-audio`, fusionnée dans `main` après le tag `BeforeAnySignificantChange-MAJ03`)
 - `npm run cr -- <fichier audio> --categorie "<Catégorie>" [--groupe "<Groupe>"]` accepte m4a, mp3, wav, webm, mp4, ogg (`src/transcribe.ts`).

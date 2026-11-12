@@ -1,4 +1,4 @@
-// Modèle HTML/CSS du compte-rendu (docs/TEMPLATE.md, reference/exemple-cr-musiciens.html).
+// Modèle HTML/CSS du compte-rendu, charte GCC (docs/TEMPLATE.md, reference/exemple-cr-musiciens-charte-gcc.html).
 
 import { readFileSync } from 'node:fs';
 import { CATEGORIES, DEFAULT_CATEGORY, type Category } from './categories.ts';
@@ -6,6 +6,7 @@ import { ICONS, iconSymbols } from './icons.ts';
 import type { Block, CompteRendu, Element } from './types.ts';
 
 const FONTS_DIR = new URL('../fonts/', import.meta.url);
+const LOGO = new URL('../reference/gcc-logo.png', import.meta.url);
 
 const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août',
   'septembre', 'octobre', 'novembre', 'décembre'];
@@ -55,7 +56,7 @@ function icon(name: string | undefined, fallback: string, cls = ''): string {
 
 function fontFace(family: string, file: string, weight: number): string {
   const data = readFileSync(new URL(file, FONTS_DIR)).toString('base64');
-  return `@font-face{font-family:${family};font-weight:${weight};src:url(data:font/ttf;base64,${data}) format("truetype")}`;
+  return `@font-face{font-family:"${family}";font-weight:${weight};src:url(data:font/woff2;base64,${data}) format("woff2")}`;
 }
 
 function hasContent(b: Block): boolean {
@@ -73,17 +74,23 @@ function meta(e: Element): string {
   return parts.length ? `<p class="meta">${parts.join(' · ')}</p>` : '';
 }
 
-function card(e: Element, fallbackPicto: string, iconCls: string): string {
+
+function card(e: Element, fallbackPicto: string): string {
   const tags = e.tags?.length ? `<span class="tag">${e.tags.map(plain).join(' · ')}</span>` : '';
-  return `<div class="card">${icon(e.picto, fallbackPicto, 'lg' + iconCls)}<div>`
+  return `<div class="card">${icon(e.picto, fallbackPicto, 'lg')}<div>`
     + (e.titre ? `<h3>${plain(e.titre)}</h3>` : '')
     + (e.texte ? `<p>${rich(e.texte)}</p>` : '')
     + meta(e) + tags + '</div></div>';
 }
 
-function heading(b: Block, big: boolean): string {
-  const d = BLOCK_DEFAULTS[b.type];
-  return `<h2${big ? '' : ' class="sm"'}>${icon(b.picto, d.picto, big ? 'lg' : '')}${plain(b.titre ?? d.titre)}</h2>`;
+// Intertitre de section, avec la petite barre de couleur de la catégorie.
+function heading(b: Block): string {
+  return `<h2 class="sec">${plain(b.titre ?? BLOCK_DEFAULTS[b.type].titre)}</h2>`;
+}
+
+// Libellé en haut d'un panneau (« À retenir », bilan placé à côté).
+function label(text: string, picto: string): string {
+  return `<div class="label">${icon(picto, picto, 'xs')}${plain(text)}</div>`;
 }
 
 function dots(items: string[]): string {
@@ -95,36 +102,36 @@ function gridCols(n: number): number {
   return n % 3 === 0 ? 3 : 2;
 }
 
-function renderBlock(b: Block, big = false): string {
+function renderBlock(b: Block): string {
   const d = BLOCK_DEFAULTS[b.type];
   const els = b.elements ?? [];
   switch (b.type) {
     case 'intertitre':
-      return `<div class="inter"><div class="big">${plain(b.titre)}`
-        + (b.sous_titre ? ` <span>${plain(b.sous_titre)}</span>` : '') + '</div></div>';
+      return `<h2 class="inter"><span class="yr">${plain(b.titre)}</span>`
+        + (b.sous_titre ? ` <small>${plain(b.sous_titre)}</small>` : '') + '</h2>';
     case 'bilan':
-      return `<section>${heading(b, big)}${dots(els.map(elementText))}</section>`;
+      return `<section>${heading(b)}<div class="panel">${dots(els.map(elementText))}</div></section>`;
     case 'objectif': {
       // Éléments avec un titre : piliers (picto, titre, texte), comme reference/exemple-cr-gcc.png ;
-      // sinon étapes numérotées, comme reference/exemple-cr-musiciens.png.
+      // sinon étapes numérotées, comme reference/exemple-cr-musiciens-charte-gcc.png.
       const pillars = els.length > 0 && els.every((e) => e.titre);
       const steps = !els.length ? '' : pillars
         ? '<div class="pillars">'
           + els.map((e) => `<div class="pillar">${icon(e.picto, 'target', 'lg w')}<div><b>${plain(e.titre)}</b>`
             + (e.texte ? `<span>${rich(e.texte)}</span>` : '') + '</div></div>').join('')
           + '</div>'
-        : `<div><div class="eyebrow" style="margin-bottom:2mm">${plain(b.titre_etapes ?? 'Étapes')}</div>`
+        : `<div><div class="k">${plain(b.titre_etapes ?? 'Étapes')}</div>`
           + `<div class="steps" style="grid-template-columns:repeat(${Math.min(els.length, 4)},1fr)">`
           + els.map((e, i) => `<div><span class="n">${i + 1}</span>${rich(elementText(e))}</div>`).join('')
           + '</div></div>';
       return `<section><div class="goal${steps ? ' split' : ''}"><div class="txt">`
-        + `<div class="eyebrow">${plain(b.sous_titre ?? d.titre)}</div>`
+        + `<div class="k">${plain(b.sous_titre ?? d.titre)}</div>`
         + (b.titre ? `<h3>${plain(b.titre)}</h3>` : '')
         + (b.texte ? `<p>${rich(b.texte)}</p>` : '')
         + `</div>${steps}</div></section>`;
     }
     case 'prochaines_etapes':
-      return `<section>${heading(b, big)}<div class="next">`
+      return `<section>${heading(b)}<div class="panel next">`
         + els.map((e) => `<div class="row"><b>${e.qui ? plain(e.qui) : '<i>à confirmer</i>'}</b>`
           + `<span>${rich(elementText(e))}</span>`
           + `<span class="when">${e.quand ? plain(e.quand) : '<i>à confirmer</i>'}</span></div>`).join('')
@@ -134,17 +141,14 @@ function renderBlock(b: Block, big = false): string {
     case 'questions':
     case 'nouveautes': {
       const cols = b.type === 'nouveautes' ? Math.min(els.length, 2) : gridCols(els.length);
-      const iconCls = b.type === 'nouveautes' ? ' sage' : '';
-      return `<section>${heading(b, big)}<div class="grid" style="grid-template-columns:repeat(${cols},1fr)">`
-        + els.map((e) => card(e, d.cardPicto, iconCls)).join('') + '</div></section>';
+      return `<section>${heading(b)}<div class="grid" style="grid-template-columns:repeat(${cols},1fr)">`
+        + els.map((e) => card(e, d.cardPicto)).join('') + '</div></section>';
     }
   }
 }
 
-function presence(label: string, names: string[], bold: boolean): string {
-  if (!names.length) return '';
-  const list = names.map(plain).join(' · ');
-  return `<div class="who">${label} : ${bold ? `<b>${list}</b>` : list}</div>`;
+function count(n: number, word: string): string {
+  return `${n} ${word}${n > 1 ? 's' : ''}`;
 }
 
 export function renderHtml(cr: CompteRendu): string {
@@ -156,135 +160,149 @@ export function renderHtml(cr: CompteRendu): string {
   const blocks = (cr.blocs ?? []).filter(hasContent);
   const keep = (cr.a_retenir ?? []).slice(0, 3);
 
+  // Présents en pastilles blanches sous le titre, absents barrés ; rien sans groupe.
+  const chips = participants.map((p) => `<span class="chip">${plain(p)}</span>`)
+    .concat(absents.map((a) => `<span class="chip abs">${plain(a)}</span>`)).join('');
+  const sub = participants.length || absents.length
+    ? `<p class="sub"><b>${count(participants.length, 'participant')}</b>`
+      + (absents.length ? ` · ${count(absents.length, 'absent')}` : '') + `</p><div class="chips">${chips}</div>`
+    : '';
+
   // Le premier bilan se place à côté de « À retenir », comme dans la référence.
   const bilanIdx = blocks.findIndex((b) => b.type === 'bilan');
   const topBilan = bilanIdx >= 0 ? blocks.splice(bilanIdx, 1)[0] : undefined;
 
   const keepHtml = keep.length
-    ? `<div class="keep"><div class="eyebrow">${icon('pin', 'pin', 'xs')}À retenir</div><ul>`
-      + keep.map((k) => `<li>${icon(k.picto, 'target')}<div><b>${plain(k.titre)}</b>`
-        + (k.detail ? `<span>${rich(k.detail)}</span>` : '') + '</div></li>').join('')
-      + '</ul></div>'
+    ? `<div class="panel tint">${label('À retenir', 'pin')}`
+      + keep.map((k, i) => `<div class="row"><span class="num">${i + 1}</span><div><b>${plain(k.titre)}</b>`
+        + (k.detail ? `<span>${rich(k.detail)}</span>` : '') + '</div></div>').join('')
+      + '</div>'
     : '';
-  const topParts = [keepHtml, topBilan ? renderBlock(topBilan, true) : ''].filter(Boolean);
+  const bilanHtml = topBilan
+    ? `<div class="panel">${label(topBilan.titre ?? BLOCK_DEFAULTS.bilan.titre, topBilan.picto && ICONS[topBilan.picto] ? topBilan.picto : 'history')}`
+      + dots((topBilan.elements ?? []).map(elementText)) + '</div>'
+    : '';
+  const topParts = [keepHtml, bilanHtml].filter(Boolean);
   const top = topParts.length
     ? `<div class="top" style="grid-template-columns:repeat(${topParts.length},1fr)">${topParts.join('')}</div>`
     : '';
 
   const confirm = cr.a_confirmer?.length
-    ? `<section><div class="confirm"><div class="eyebrow">${icon('alert', 'alert', 'xs')}À confirmer</div>`
-      + dots(cr.a_confirmer) + '</div></section>'
+    ? `<section><div class="panel confirm">${label('À confirmer', 'alert')}${dots(cr.a_confirmer)}</div></section>`
     : '';
 
-  const footLeft = ['GCC', cat.label === 'GCC' ? subtitle : cat.label, cr.titre].map(plain).join(' · ');
+  const footLeft = ['GCC Meeting', cat.label, cr.titre].map(plain).join(' · ');
+  const logo = readFileSync(LOGO).toString('base64');
 
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${plain(cr.titre)}</title>
 <style>
-${fontFace('Caladea', 'Caladea-Regular.ttf', 400)}
-${fontFace('Caladea', 'Caladea-Bold.ttf', 700)}
-${fontFace('Carlito', 'Carlito-Regular.ttf', 400)}
-${fontFace('Carlito', 'Carlito-Bold.ttf', 700)}
-:root{--bg:#F4EEE6;--card:#EAE0D2;--dark:#2E2118;--rust:#B4552F;--sage:#6E7B5C;--muted:#6B5D50;--line:#DCCFBD;--cat:${cat.color}}
-@page{size:210mm 297mm;margin:12mm 0 0;background:#F4EEE6}
+${fontFace('Inter', 'Inter-Regular.woff2', 400)}
+${fontFace('Inter', 'Inter-Medium.woff2', 500)}
+${fontFace('Inter', 'Inter-SemiBold.woff2', 600)}
+${fontFace('Inter', 'Inter-Bold.woff2', 700)}
+${fontFace('Inter Display', 'InterDisplay-Bold.woff2', 700)}
+${fontFace('Inter Display', 'InterDisplay-ExtraBold.woff2', 800)}
+:root{--ink:#1c1c1e;--muted:#6c6c72;--fond:#f2f2f7;--card:#fff;--line:#e4e4e5;--brand:#cf2a20;--cat:${cat.color};
+--tint:color-mix(in srgb,var(--cat) 9%,white);--tint-line:color-mix(in srgb,var(--cat) 18%,white);--soft:color-mix(in srgb,var(--cat) 12%,white);
+--shadow:0 4px 14px rgba(28,28,30,.08),0 1px 2px rgba(28,28,30,.05);
+--sans:Inter,"PingFang SC","Noto Sans CJK SC",-apple-system,sans-serif;--display:"Inter Display",Inter,"PingFang SC","Noto Sans CJK SC",sans-serif}
+@page{size:210mm 297mm;margin:12mm 0 0;background:#f2f2f7}
 @page:first{margin:0}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{background:var(--bg);-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{font-family:Carlito,Calibri,sans-serif;color:var(--dark);font-size:10.5pt;line-height:1.38}
-.page{width:210mm;min-height:297mm;background:var(--bg);position:relative;overflow:hidden;padding:0 0 14.5mm}
-.foot{position:absolute;left:9mm;right:9mm;bottom:5mm;display:flex;justify-content:space-between;font-size:6.8pt;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
-.eyebrow{font-size:7pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--rust)}
-h1{font-family:Caladea,Cambria,serif;font-weight:700;font-size:23pt;line-height:1.05;color:#fff;margin-top:2.2mm}
-h2{font-family:Caladea,Cambria,serif;font-weight:700;font-size:14.5pt;line-height:1.15;display:flex;align-items:center;gap:2.6mm;margin-bottom:2.7mm}
-h2.sm{font-size:12.5pt;margin-bottom:2.3mm}
-h3{font-family:Caladea,Cambria,serif;font-weight:700;font-size:11pt;line-height:1.2}
-section{margin-top:4.5mm}
-.ico{width:5.2mm;height:5.2mm;flex:none;stroke:var(--rust);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
-.ico.lg{width:7mm;height:7mm}
-.ico.xs{width:4mm;height:4mm}
-.ico.sage{stroke:var(--sage)}
-/* bandeau */
-.cover{background:var(--dark);padding:7mm 9mm 6mm;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:6mm}
-.cover .eyebrow{color:var(--cat);filter:brightness(1.35)}
-.cover .date{color:#D9CBB8;font-size:9.5pt;margin-top:1.8mm}
-.cover .who{color:#D9CBB8;font-size:9pt;margin-top:.8mm}
-.cover .who b{color:#fff}
-.rings{position:absolute;right:30mm;top:-30mm;width:70mm;height:70mm;border-radius:50%;border:0.3mm solid rgba(255,255,255,.07);box-shadow:0 0 0 6mm rgba(255,255,255,0),0 0 0 6.3mm rgba(255,255,255,.06),0 0 0 12mm rgba(255,255,255,0),0 0 0 12.3mm rgba(255,255,255,.05)}
-.badge{position:relative;flex:none;display:flex;align-items:center;gap:2.6mm;border-radius:10mm;padding:2mm 4.4mm 2mm 2.4mm;color:#fff;background:var(--cat)}
-.badge .dot{width:8mm;height:8mm;border-radius:50%;background:rgba(255,255,255,.18);display:grid;place-items:center}
-.badge .dot svg{width:4.6mm;height:4.6mm;stroke:#fff;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.badge b{display:block;font-family:Caladea,serif;font-size:11.5pt;line-height:1.1}
-.badge span{font-size:7.5pt;letter-spacing:.08em;text-transform:uppercase;opacity:.85}
-/* contenu sous le bandeau : réduit par render.ts (--fit < 1) s'il dépasse une page ; marges latérales compensées */
-.fit{zoom:var(--fit,1)}
-.fit .tag{font-size:max(6.8pt,calc(6pt / var(--fit,1)))}
-.fit .eyebrow{font-size:max(7pt,calc(6pt / var(--fit,1)))}
-/* à retenir + bilan */
-.top{display:grid;gap:5.4mm;padding:6.3mm calc(9mm / var(--fit,1)) 0;align-items:start}
-.top section{margin-top:0}
-.keep{background:var(--card);border-radius:2.2mm;padding:3.6mm 3.8mm}
-.keep .eyebrow{margin-bottom:2.6mm;display:flex;align-items:center;gap:1.8mm}
-.keep ul{list-style:none;display:grid;gap:2.6mm}
-.keep li{display:flex;gap:2.6mm;align-items:flex-start}
-.keep li b{display:block}
-.keep li span{color:var(--muted);font-size:9.5pt}
-ul.dots{list-style:none;display:grid;gap:2mm}
-ul.dots li{padding-left:4mm;position:relative}
-ul.dots li::before{content:"";position:absolute;left:.6mm;top:2.1mm;width:1.4mm;height:1.4mm;border-radius:50%;background:var(--rust)}
-/* corps */
-.body{padding:0 calc(9mm / var(--fit,1))}
-.body>section:first-child{margin-top:6.3mm}
-.inter{margin-top:6.3mm;border-top:0.4mm solid var(--line);padding-top:4.5mm}
-.inter+section{margin-top:0}
-.inter .big{font-family:Caladea,serif;font-weight:700;font-size:26pt;line-height:1;color:var(--rust);display:flex;align-items:baseline;gap:3mm;margin-bottom:3.6mm}
-.inter .big span{font-size:10pt;font-family:Carlito,sans-serif;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
-.goal{background:var(--dark);color:#fff;border-radius:2.2mm;padding:4.5mm 4.2mm;display:grid;gap:2.4mm}
-.goal.split{grid-template-columns:1fr 1.25fr;align-items:center;column-gap:6mm}
-.goal .txt{display:grid;gap:1.6mm}
-.goal .eyebrow{color:#E9B79F}
-.goal h3{font-size:13.5pt;color:#fff}
-.goal p{color:#D9CBB8;font-size:9.8pt}
+html,body{background:var(--fond);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:var(--sans);color:var(--ink);font-size:9.6pt;line-height:1.4;letter-spacing:-.003em}
+b{font-weight:600}
+.page{width:210mm;min-height:297mm;background:var(--fond);position:relative;overflow:hidden;padding:8mm 0 12mm}
+.halo{position:absolute;left:-40mm;top:-40mm;width:150mm;height:110mm;border-radius:50%;background:var(--cat);opacity:.13;filter:blur(40px)}
+.foot{position:absolute;left:11mm;right:11mm;bottom:5.5mm;display:flex;justify-content:space-between;font-size:7.4pt;color:var(--muted)}
+/* en-tête : signature, catégorie · groupe, titre, participants */
+.head{position:relative;padding:0 11mm}
+.brandrow{display:flex;justify-content:space-between;align-items:center}
+.brand{display:flex;align-items:center;gap:2.4mm;font-weight:700;font-size:12.5pt;letter-spacing:-.02em}
+.brand img{width:8mm;height:8mm}
+.brand span{color:var(--brand)}
+.date{font-size:9pt;color:var(--muted)}
+.svcline{display:flex;align-items:center;gap:1.6mm;color:var(--cat);font-weight:600;font-size:10pt;margin-top:4.6mm}
+.dot{width:2.2mm;height:2.2mm;border-radius:50%;background:var(--cat)}
+h1{font-family:var(--display);font-weight:800;font-size:25pt;line-height:1.05;letter-spacing:-.03em;margin-top:1.4mm}
+.sub{color:var(--muted);font-size:10pt;margin-top:1.6mm}
+.sub b{color:var(--ink);font-weight:500}
+.chips{display:flex;flex-wrap:wrap;gap:1.4mm;margin-top:2.2mm}
+.chip{background:var(--card);border-radius:10mm;padding:.8mm 2.6mm;font-size:8.4pt;font-weight:500;box-shadow:0 0 0 .25mm var(--line)}
+.chip.abs{background:transparent;color:var(--muted);text-decoration:line-through}
+/* contenu sous l'en-tête : réduit par render.ts (--fit < 1) s'il dépasse une page ; marges latérales compensées */
+.fit{zoom:var(--fit,1);position:relative}
+.fit .tag{font-size:max(7.6pt,calc(6pt / var(--fit,1)))}
+.fit .label,.fit .k{font-size:max(8pt,calc(6.4pt / var(--fit,1)))}
+.top{display:grid;gap:3.6mm;padding:4.4mm calc(11mm / var(--fit,1)) 0;align-items:stretch}
+.body{padding:0 calc(11mm / var(--fit,1))}
+section{margin-top:3.9mm}
+.panel{background:var(--card);border-radius:4.2mm;padding:3.8mm 4.4mm;box-shadow:var(--shadow)}
+.panel.tint{background:var(--tint);box-shadow:0 0 0 .25mm var(--tint-line)}
+.label{font-size:8pt;font-weight:600;color:var(--cat);margin-bottom:2.4mm;display:flex;align-items:center;gap:1.6mm}
+.row{display:flex;gap:3mm;align-items:flex-start;padding:1.6mm 0}
+.row+.row{border-top:.25mm solid var(--tint-line)}
+.row b{display:block}
+.row span{color:var(--muted);font-size:9pt}
+.row .num{flex:none;width:6mm;height:6mm;border-radius:50%;background:var(--cat);color:#fff;display:grid;place-items:center;font-size:8.4pt;font-weight:600}
+.ico{width:4.6mm;height:4.6mm;flex:none;stroke:var(--cat);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ico.xs{width:3.6mm;height:3.6mm}
+.ico.lg{width:7.6mm;height:7.6mm;padding:1.6mm;border-radius:50%;background:var(--soft);margin-top:-.4mm}
+.ico.w{stroke:#fff;background:rgba(255,255,255,.14)}
+ul.dots{list-style:none;display:grid;gap:1.8mm}
+ul.dots li{padding-left:3.6mm;position:relative}
+ul.dots li::before{content:"";position:absolute;left:0;top:1.9mm;width:1.3mm;height:1.3mm;border-radius:50%;background:var(--cat)}
+h2{font-family:var(--display);font-weight:700;letter-spacing:-.02em;display:flex;align-items:baseline;gap:2.4mm}
+h2.sec{font-size:11.5pt;margin-bottom:2.3mm}
+h2.sec::before{content:"";width:1.1mm;height:4.2mm;border-radius:1mm;background:var(--cat);align-self:center}
+h2.inter{font-size:14pt;margin:4.4mm 0 -1.6mm}
+h2.inter .yr{color:var(--cat)}
+h2.inter small{font-size:9.5pt;font-weight:500;color:var(--muted);letter-spacing:0;font-family:var(--sans)}
+h3{font-weight:600;font-size:9.6pt;margin-bottom:.6mm}
+.goal{background:var(--cat);color:#fff;border-radius:4.2mm;padding:4.4mm 5mm;display:grid;gap:2.4mm}
+.goal.split{grid-template-columns:1fr 1.2fr;align-items:center;column-gap:5mm}
+.goal .k{font-size:8pt;font-weight:600;color:color-mix(in srgb,var(--cat) 35%,white);margin-bottom:1.4mm}
+.goal .steps,.goal .pillars{margin-top:.6mm}
+.goal h3{font-family:var(--display);font-size:14pt;font-weight:700;letter-spacing:-.02em;line-height:1.15;margin:0}
+.goal p{color:color-mix(in srgb,var(--cat) 18%,white);font-size:9pt;margin-top:1.8mm}
 .goal p b{color:#fff}
 .steps{display:grid;gap:2mm}
-.steps div{border:0.25mm solid rgba(233,183,159,.35);border-radius:1.6mm;padding:2.4mm 2mm;font-size:8.6pt;color:#F4EEE6;line-height:1.25}
-.steps .n{display:block;font-family:Caladea,serif;font-weight:700;font-size:12pt;color:#E9B79F}
+.steps div{background:rgba(255,255,255,.12);border-radius:3mm;padding:2.6mm;font-size:8.4pt;line-height:1.3;color:#e9e9ed}
+.steps .n{display:block;font-size:12pt;font-weight:700;margin-bottom:.8mm;color:#fff}
 .steps div b{color:#fff}
-.pillars{display:grid;gap:2.2mm}
-.pillar{display:flex;gap:2.6mm;align-items:flex-start;border:0.25mm solid rgba(233,183,159,.35);border-radius:1.6mm;padding:2.4mm 3mm}
-.pillar b{font-family:Caladea,serif;font-size:11pt;color:#E9B79F;display:block}
-.pillar span{font-size:9.4pt;color:#F4EEE6}
-.pillar span b{display:inline;font-family:inherit;font-size:inherit;color:#fff}
-.ico.w{stroke:#E9B79F}
+.pillars{display:grid;gap:2mm}
+.pillar{display:flex;gap:2.6mm;align-items:flex-start;background:rgba(255,255,255,.12);border-radius:3mm;padding:2.6mm 3mm}
+.pillar b{display:block;font-size:10pt;color:#fff}
+.pillar span{font-size:8.6pt;color:#e9e9ed}
+.pillar span b{display:inline;font-size:inherit}
 .grid{display:grid;gap:2.7mm}
-.grid .card{height:100%}
-.card{background:var(--card);border-radius:2.2mm;padding:3.1mm 3.4mm;display:flex;gap:3.2mm;align-items:flex-start}
-.card p{font-size:9.6pt;color:#3E3229;margin-top:.8mm}
-.card p.meta{font-size:8.6pt;color:var(--muted);margin-top:1.4mm}
-.card p.meta b{color:var(--dark)}
-.tag{display:inline-block;font-size:6.8pt;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--sage);margin-top:1.2mm}
-.next{background:var(--card);border-radius:2.2mm;padding:1.4mm 3.8mm}
-.next .row{display:grid;grid-template-columns:32mm 1fr 30mm;gap:3mm;padding:1.8mm 0;font-size:9.6pt}
-.next .row+.row{border-top:0.25mm solid var(--line)}
-.next .when{color:var(--muted);text-align:right}
-.next i{font-style:normal;color:var(--rust)}
-.confirm{border:0.3mm dashed var(--rust);border-radius:2.2mm;padding:3.1mm 3.8mm;font-size:9.6pt}
-.confirm .eyebrow{margin-bottom:2mm;display:flex;align-items:center;gap:1.8mm}
+.card{background:var(--card);border-radius:4.2mm;padding:2.7mm 3.4mm;box-shadow:var(--shadow);display:flex;gap:2.6mm;align-items:flex-start;height:100%}
+.card p{color:var(--muted);font-size:8.8pt;line-height:1.35}
+.card p b{color:var(--ink)}
+.card p.meta{font-size:8.4pt;margin-top:1.2mm}
+.tag{display:inline-block;margin-top:1.4mm;font-size:7.6pt;font-weight:600;color:var(--cat);background:var(--soft);border-radius:10mm;padding:.4mm 2mm}
+.next{padding:1.4mm 4.8mm}
+.next .row{display:grid;grid-template-columns:32mm 1fr 30mm;gap:3mm;font-size:9pt}
+.next .row span{color:var(--ink)}
+.next .row+.row{border-top-color:var(--line)}
+.next .when{text-align:right}
+.next .row span.when{color:var(--muted)}
+.next i{font-style:normal;color:var(--cat)}
+.confirm{box-shadow:none;background:transparent;border:.3mm dashed color-mix(in srgb,var(--cat) 45%,white);font-size:9pt}
 /* PDF de plusieurs pages : ne pas couper un bloc, ne pas laisser un titre seul en bas de page */
-.keep,.goal,.card,.next .row,.confirm,.inter{break-inside:avoid}
-h2,.inter{break-after:avoid}
+.panel,.goal,.card,.next .row{break-inside:avoid}
+h2{break-after:avoid}
 </style></head><body>
 <svg width="0" height="0" style="position:absolute">
 ${iconSymbols()}
 </svg>
 <div class="page">
-  <div class="cover">
-    <div class="rings"></div>
-    <div>
-      <div class="eyebrow">${plain(cat.label)} · ${plain(subtitle)}</div>
-      <h1>${plain(cr.titre)}</h1>
-      <div class="date">${escapeHtml(date)}</div>
-      ${presence('Présents', participants, true)}${presence('Absents', absents, false)}
-    </div>
-    <div class="badge"><div class="dot"><svg><use href="#${cat.picto}"/></svg></div><div><b>${plain(cat.label)}</b><span>${plain(subtitle)}</span></div></div>
+  <div class="halo"></div>
+  <div class="head">
+    <div class="brandrow"><div class="brand"><img src="data:image/png;base64,${logo}" alt="">GCC <span>Meeting</span></div><div class="date">Compte-rendu · ${escapeHtml(date)}</div></div>
+    <div class="svcline"><i class="dot"></i>${plain(cat.label)} · ${plain(subtitle)}</div>
+    <h1>${plain(cr.titre)}</h1>
+    ${sub}
   </div>
   <div class="fit">
   ${top}

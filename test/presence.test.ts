@@ -74,11 +74,11 @@ test('contrôles : mois sans année (année probable), éléments et longueur', 
   assert.ok(warnings.some((w) => w.includes('Texte de 26 mots')));
 });
 
-test('bandeau : présents en gras, absents à part, rien sans groupe', () => {
+test('participants : présents en pastilles, absents barrés, rien sans groupe', () => {
   const html = renderHtml({ titre: 'T', date: '2026-11', participants: ['Jonathan Z.', 'Christelle C.'], absents: ['Stéphane Z.'] });
-  assert.ok(html.includes('<div class="who">Présents : <b>Jonathan Z. · Christelle C.</b></div>'));
-  assert.ok(html.includes('<div class="who">Absents : Stéphane Z.</div>'));
-  assert.ok(!renderHtml({ titre: 'T', date: '2026-11' }).includes('class="who"'));
+  assert.ok(html.includes('<p class="sub"><b>2 participants</b> · 1 absent</p>'));
+  assert.ok(html.includes('<span class="chip">Jonathan Z.</span><span class="chip">Christelle C.</span><span class="chip abs">Stéphane Z.</span>'));
+  assert.ok(!renderHtml({ titre: 'T', date: '2026-11' }).includes('class="chip'));
 });
 
 const base = { titre: 'T', date: '2026-11', a_retenir: [{ titre: 'Groupes fixes' }], a_confirmer: [] };

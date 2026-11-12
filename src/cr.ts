@@ -154,7 +154,10 @@ async function main() {
     for (const name of presence.unknown) ai.a_confirmer.push(`Absent non reconnu dans le groupe : ${name}`);
     for (const warning of checkCompteRendu(ai)) console.warn(`Contrôle : ${warning}`);
     for (const repetition of findRepetitions(ai)) console.warn(`Contrôle : répétition, ${repetition}.`);
-    writeFileSync(jsonPath, JSON.stringify(toCompteRendu(ai, categorie, { participants: presence.participants, absents: presence.absents }), null, 2) + '\n', 'utf-8');
+    writeFileSync(jsonPath, JSON.stringify({
+      ...toCompteRendu(ai, categorie, { participants: presence.participants, absents: presence.absents }),
+      ...(groupe && { sous_titre: groupe }), // charte GCC : « ● Catégorie · Groupe » au-dessus du titre
+    }, null, 2) + '\n', 'utf-8');
     console.log(`JSON : ${jsonPath}`);
     return render(jsonPath);
   };
