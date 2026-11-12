@@ -11,7 +11,7 @@
   - s'il dépasse toujours : PDF sur 2 pages. Le PNG est toujours une seule image en hauteur (déjà le cas, maintenant vérifié par un test).
 - **Annuaire** : 59 personnes, avec les 5 noms cités par Christelle pour les groupes Paix, Fidélité et Bonté (Cyliane D., Mina C., Claire L., Cyrick D., Valérie W.).
   - L'onglet Membres_Groupes complet n'était pas disponible (pas dans les Téléchargements ; le Google Drive connecté est un autre compte) : les autres membres de ces groupes restent à ajouter.
-  - « Isabelle » (EDD) : toujours à confirmer, pas ajoutée.
+  - « Isabelle » (professeurs EDD) = Isabelle J., déjà dans l'annuaire (confirmé par Christelle le 12/11/2026).
 - MAJxx.TXT : remplacé par ce journal (choix de Christelle).
 - Tests : `npm test` → 22 tests OK (nouveau : dépassement mesuré, PNG en une image) ; `npm run typecheck` → sans erreur.
 
@@ -30,7 +30,7 @@
 
 **À valider par Christelle**
 - Musiciens reste sur 2 pages : accepter, ou demander au modèle un pourcentage plus fort que le dépassement mesuré (le bandeau ne rétrécit pas, donc il faut couper plus que X %).
-- Le reste de l'onglet Membres_Groupes (export PDF dans les Téléchargements, par exemple) et « Isabelle ».
+- Le reste de l'onglet Membres_Groupes (export PDF dans les Téléchargements, par exemple).
 - La liste des membres de `src/prompt.md` (12 noms) pourrait être tirée de l'annuaire, pour que l'IA retrouve aussi les initiales des autres personnes.
 
 ## 11/11/2026 — Claude Code, Mission 2 (suite 2) : flash par défaut, annuaire, essais
