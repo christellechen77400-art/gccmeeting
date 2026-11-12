@@ -2,6 +2,37 @@
 
 À mettre à jour à la fin de chaque conversation (Claude ou Claude Code). Le plus récent en haut.
 
+## 12/11/2026 — Claude Code, Mission 2 (suite 4) : répétitions, piliers, annuaire complet
+**Fait** (branche `mission-2-ia`, **pas fusionnée dans `main`**)
+- **Annuaire** : 118 personnes. Les 59 nouveaux noms viennent de `data/membres_groupes.json` (onglet Membres_Groupes, ajouté par Christelle) ; tous les membres de Paix, Fidélité et Bonté y sont.
+  - David S. est à la fois dans Paix et Fidélité : une seule entrée (deux personnes ?).
+  - Noms proches, gardés séparés : Stéphane D. / Stéphane Z., Océane P. / Océane Z., Lydia C. / Lydia H., Chloé J. / Chloé W., Michel C. / Michel C. (J).
+- **Consigne** (`src/prompt.md`) : chaque information n'apparaît qu'une seule fois ; seul « À retenir » résume ; pas de décision, question ou étape qui reprend un sujet déjà placé ; pas de bilan qui répète le thème. Thème ou objectif à piliers : un élément par pilier (titre, texte, picto).
+- **Contrôle des répétitions** (`findRepetitions`, `src/postprocess.ts`) : un titre d'au moins 2 mots significatifs, retrouvé dans un autre bloc (hors « À retenir »).
+  - Mots comparés sans accents, sur leurs 5 premières lettres. Le texte d'explication d'un objectif est ignoré, car il peut citer d'autres sujets.
+  - Les répétitions sont toujours affichées dans la console (« Contrôle : répétition… ») ; aucune n'est trouvée dans l'exemple musiciens validé.
+- **Quand ça déborde à 80 %** : le modèle reçoit en une fois « trop long de X % », 1. supprimer les répétitions (liste du contrôle), 2. raccourcir d'environ 1,5 × X %, sans supprimer aucun sujet. S'il déborde encore : 2 pages.
+  - Après raccourcissement, un titre de la première version introuvable dans la seconde est signalé (les phrases sans titre sont ignorées : elles changent de mots en étant raccourcies).
+- **Piliers** (`src/template.ts`) : les éléments d'un objectif qui ont un titre s'affichent en piliers (picto, titre, texte), comme `reference/exemple-cr-gcc.png` ; sans titre, en étapes numérotées. `exemples/tous-les-blocs.json` montre les piliers Prière et Louange. L'exemple musiciens est inchangé au pixel près.
+- Tests : `npm test` → 26 tests OK ; `npm run typecheck` → sans erreur.
+
+**Essais `deepseek-flash`** (12/11/2026, PNG dans `essais/`)
+
+| | GCC 4/10 (Coordination Franco) | Musiciens |
+|---|---|---|
+| 1re version | 11 % de trop, 2 répétitions repérées | 4 % de trop, 0 répétition repérée |
+| Après raccourcissement | **5 % de trop → 2 pages** | **2 % de trop → 2 pages** |
+| Piliers Prière et Louange | oui | — |
+| Groupe Bonté | oui | — |
+| Répétitions restantes | la question « nouveaux musiciens » est à la fois dans une carte « Groupe Bonté » et dans « Questions ouvertes » (repérée, mais pas corrigée par le modèle) ; « avec les teams fixes » a quitté le pilier Prière pour une carte « Teams fixes 2027 » | aucune entre blocs : groupes fixes, batterie et campus une seule fois (plus « À retenir ») |
+
+- Le musiciens a été lancé deux fois. Au premier lancement, la question « Faut-il équiper tout le monde ? » répétait la carte Pianistes sans être repérée (« faut » comptait comme un mot du sujet), et le contrôle des sujets disparus signalait des phrases simplement reformulées. Les deux sont corrigés ; le PNG est celui du second lancement.
+- Le modèle raccourcit encore peu (environ 5 % de jetons en moins) : les deux essais finissent à 2 pages, ce qui est accepté.
+
+**À valider par Christelle**
+- David S. dans Paix et dans Fidélité : une ou deux personnes ?
+- La liste des membres de `src/prompt.md` (12 noms) pourrait être tirée de l'annuaire.
+
 ## 11/11/2026 — Claude Code, Mission 2 (suite 3) : raccourcissement, annuaire complété
 **Fait** (branche `mission-2-ia`, **pas fusionnée dans `main`**)
 - **Une page**, sans limite du nombre de blocs ni réduction sous 80 % (choix de Christelle) :
