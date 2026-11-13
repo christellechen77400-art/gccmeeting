@@ -177,16 +177,17 @@ test('interface : un autre site ne peut ni lire les données ni lancer un compte
   }
 });
 
-async function createFromNotes(base: string, notes = 'Davidson présente le planning') {
+async function createFromNotes(base: string, notes = 'Davidson présente le planning', groupe = 'Musiciens') {
   const form = new FormData();
   form.append('categorie', 'Culte Franco');
-  form.append('groupe', 'Musiciens');
+  form.append('groupe', groupe);
   form.append('date', '2026-11-09');
   form.append('presents', JSON.stringify(['Jonathan Z.', 'Eva Y.']));
   form.append('absents', JSON.stringify(['Esther C.']));
   form.append('notes', notes);
-  const { id } = await (await fetch(`${base}/api/comptes-rendus`, { method: 'POST', body: form, headers: APP })).json();
-  return waitReady(base, id);
+  const res = await fetch(`${base}/api/comptes-rendus`, { method: 'POST', body: form, headers: APP });
+  assert.equal(res.status, 201);
+  return waitReady(base, (await res.json()).id);
 }
 
 const postJson = (url: string, body: unknown) =>
@@ -251,6 +252,66 @@ test('écran 2 : correction, règle retenue ou non, transcription, texte WhatsAp
     const { texte } = await (await fetch(`${url}/whatsapp`)).json();
     assert.ok(texte.startsWith('*Réunion corrigée*\nCulte Franco · Musiciens · 9 novembre 2026\n'));
     assert.match(texte, /\*À retenir\*\n1\. /);
+  } finally {
+    server.close();
+  }
+});
+
+const sendJson = (url: string, method: string, body: unknown) =>
+  fetch(url, { method, body: JSON.stringify(body), headers: { ...APP, 'Content-Type': 'application/json' } });
+
+test('écran 3 : historique, recherche plein texte sans accents, tous les mots', async () => {
+  const { server, base } = await start();
+  try {
+    const a = await createFromNotes(base, 'Planning des ateliers Zorglub');
+    const b = await createFromNotes(base, 'Thème Xylophone : prière et Zorglub');
+    const list = await (await fetch(`${base}/api/comptes-rendus`)).json();
+    assert.deepEqual(list.map((m: { id: string }) => m.id), [b.id, a.id]); // plus récent en premier
+    const ids = async (q: string) => (await (await fetch(`${base}/api/comptes-rendus?q=${encodeURIComponent(q)}`)).json()).map((m: { id: string }) => m.id);
+    assert.deepEqual(await ids('xylophone THEME'), [b.id]); // notes, sans accents ni majuscules
+    assert.deepEqual(await ids('zorglub planning'), [a.id]);
+    assert.deepEqual(await ids('zorglub'), [b.id, a.id]);
+    assert.deepEqual(await ids('Esther'), [b.id, a.id]); // absente
+    assert.deepEqual(await ids('batterie'), [b.id, a.id]); // texte du compte-rendu (exemple musiciens)
+    assert.deepEqual(await ids('zorglub introuvable'), []);
+  } finally {
+    server.close();
+  }
+});
+
+test('écran 4 : groupes créés, renommés, supprimés ; annuaire complété ; contrôles', async () => {
+  const { server, base, dir } = await start();
+  try {
+    const groups = await (await fetch(`${base}/api/config`)).json().then((c) => c.groupes);
+    const put = (g: unknown) => sendJson(`${base}/api/groupes`, 'PUT', { groupes: g });
+
+    // Renommer (ordre gardé), retirer un membre, créer, supprimer : le tout en un envoi.
+    const { Musiciens, 'Comité Orga': _deleted, ...rest } = groups;
+    const next = { ...rest, Louange: Musiciens.slice(1), Régie: ['Paul W.', ' Paul W. ', 'Alice Q.'] };
+    const saved = await (await put(next)).json();
+    assert.deepEqual(Object.keys(saved), ['Coordination Franco', 'Comité Franco', 'Louange', 'Régie']);
+    assert.deepEqual(saved.Régie, ['Paul W.', 'Alice Q.']); // espaces retirés, doublon enlevé
+    assert.deepEqual(JSON.parse(readFileSync(join(dir, 'groupes.json'), 'utf-8')), saved);
+
+    // Contrôles : nom vide, personne hors annuaire, format.
+    assert.equal((await (await put({ ' ': [] })).json()).erreur, 'Nom du groupe vide.');
+    assert.match((await (await put({ Test: ['Inconnu Z.'] })).json()).erreur, /Pas dans l'annuaire : Inconnu Z\./);
+    assert.equal((await put(['x'])).status, 400);
+    assert.equal((await put({ Test: 'x' })).status, 400);
+
+    // Annuaire : ajout, doublon refusé (sans tenir compte des accents), puis utilisable dans un groupe.
+    const directory = await (await sendJson(`${base}/api/annuaire`, 'POST', { nom: '  Inconnu   Z. ' })).json();
+    assert.equal(directory.at(-1), 'Inconnu Z.');
+    assert.equal((await sendJson(`${base}/api/annuaire`, 'POST', { nom: 'inconnu z.' })).status, 409);
+    assert.equal((await sendJson(`${base}/api/annuaire`, 'POST', { nom: '' })).status, 400);
+    assert.equal((await put({ Test: ['Inconnu Z.'] })).status, 200);
+    assert.equal(JSON.parse(readFileSync(join(dir, 'annuaire.json'), 'utf-8')).at(-1), 'Inconnu Z.');
+
+    // Un nouveau compte-rendu utilise l'annuaire de data/.
+    await createFromNotes(base, 'Notes', '');
+    assert.ok(calls.at(-1)!.directory.includes('Inconnu Z.'));
+    // Sans l'en-tête de l'interface : refusé.
+    assert.equal((await fetch(`${base}/api/groupes`, { method: 'PUT', body: '{"groupes":{}}' })).status, 403);
   } finally {
     server.close();
   }

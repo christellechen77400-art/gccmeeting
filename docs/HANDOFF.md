@@ -2,6 +2,15 @@
 
 À mettre à jour à la fin de chaque conversation (Claude ou Claude Code). Le plus récent en haut.
 
+## 13/11/2026 — Claude Code, Mission 6, étape 4 : écrans « Comptes-rendus » et « Annuaire et groupes »
+**Fait** (branche `mission-6-interface`, pas fusionnée)
+- Écran 3 : historique (plus récent en premier), date en pastille à la couleur de la catégorie, « Catégorie · Groupe · N participants · 1 page », état (en cours avec l'étape, Prêt, Erreur) ; recherche plein texte (voir DECISIONS) ; filtres par catégorie et par état ; « + Nouveau compte-rendu ».
+- Écran 4 : groupes en cartes ; volet de modification (renommer, retirer ou ajouter des membres avec suggestions de l'annuaire et les groupes de chaque personne, « + Ajouter « … » à l'annuaire », supprimer en deux clics) ; « + Nouveau groupe » ; onglet « Annuaire · N » avec recherche et ajout d'un nom (doublon refusé, sans tenir compte des accents).
+- L'écran 1 prend aussitôt les groupes modifiés (un groupe renommé ou supprimé est retiré du formulaire en cours).
+- API : `GET /api/comptes-rendus?q=`, `PUT /api/groupes`, `POST /api/annuaire`.
+- Tests : `npm test` → 41 OK ; `npm run typecheck` → sans erreur.
+- Navigateur (Chromium piloté, IA factice) : 3 comptes-rendus créés depuis l'écran 1, liste avec un compte-rendu « Rédaction en cours… » puis « Prêt », recherche « priere », filtres, ouverture ; groupe Musiciens renommé « Louange » avec un membre retiré, David S. ajouté et un nom nouveau ajouté à l'annuaire ; groupe « Régie » créé puis supprimé ; annuaire : recherche « eloise », ajout « Zoé T. », doublon « zoe t. » refusé ; l'écran 1 voit « Louange ».
+
 ## 12/11/2026 — Claude Code, Mission 6, étape 3 : écran « Aperçu et corrections »
 **Fait** (branche `mission-6-interface`, pas fusionnée ; étapes enchaînées sans attendre les tests, à la demande de Christelle)
 - En-tête : catégorie · groupe · date, titre, boutons « Texte WhatsApp » (copié + affiché), « PNG », « Télécharger le PDF ».

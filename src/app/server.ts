@@ -33,6 +33,7 @@ const RESULT_FILES: Record<string, string> = {
 };
 const MAX_JSON = 100_000; // corps JSON d'une requête de l'interface, en octets
 const MAX_REQUEST = 2000; // caractères d'une demande de correction
+const MAX_NAME = 60; // caractères d'un nom de personne ou de groupe
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export const APP_HEADER = 'x-gcc-meeting'; // envoyé par l'interface pour toute modification
 
@@ -64,6 +65,16 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
     if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
   } catch { /* message ci-dessous */ }
   throw new HttpError(400, 'Requête mal formée.');
+}
+
+// Recherche sans tenir compte des majuscules ni des accents.
+const fold = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+
+function cleanName(value: unknown, what: string): string {
+  const name = typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
+  if (!name) throw new HttpError(400, `${what} vide.`);
+  if (name.length > MAX_NAME) throw new HttpError(400, `${what} trop long (${MAX_NAME} caractères au plus).`);
+  return name;
 }
 
 function nameList(value: FormDataEntryValue | null): string[] {
@@ -215,6 +226,49 @@ export function createApp(options: { dataDir?: string; pipeline?: Pipeline; corr
     return { correction, ...(regle && { regle, resume: describeRule(regle) }) };
   }
 
+  // Historique : tous les comptes-rendus, ou ceux dont le texte contient tous les mots cherchés
+  // (titre, catégorie, groupe, personnes, compte-rendu, notes ou transcription).
+  function search(q: string): Meta[] {
+    const words = fold(q).split(/\s+/).filter(Boolean);
+    const list = store.list();
+    if (!words.length) return list;
+    return list.filter((meta) => {
+      const folder = store.folder(meta.id)!;
+      const parts = [meta.titre, meta.categorie, meta.groupe, ...meta.presents, ...meta.absents, meta.source.nom];
+      for (const file of ['cr.json', 'cr.texte.txt']) {
+        if (existsSync(join(folder, file))) parts.push(readFileSync(join(folder, file), 'utf-8'));
+      }
+      const text = fold(parts.filter(Boolean).join('\n'));
+      return words.every((w) => text.includes(w));
+    });
+  }
+
+  // Groupes envoyés en entier par l'écran « Annuaire et groupes » : noms propres, membres de l'annuaire.
+  function saveGroups(value: unknown): Record<string, string[]> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new HttpError(400, 'Groupes mal formés.');
+    const directory = new Set(store.directory());
+    const groups: Record<string, string[]> = {};
+    for (const [rawName, members] of Object.entries(value)) {
+      const name = cleanName(rawName, 'Nom du groupe');
+      if (groups[name]) throw new HttpError(400, `Deux groupes s'appellent « ${name} ».`);
+      if (!Array.isArray(members)) throw new HttpError(400, 'Groupes mal formés.');
+      const list = [...new Set(members.map((m) => cleanName(m, 'Nom')))];
+      const unknown = list.filter((m) => !directory.has(m));
+      if (unknown.length) throw new HttpError(400, `Pas dans l'annuaire : ${unknown.join(', ')}. Ajoute-les d'abord à l'annuaire.`);
+      groups[name] = list;
+    }
+    store.saveGroups(groups);
+    return groups;
+  }
+
+  function addToDirectory(value: unknown): string[] {
+    const name = cleanName(value, 'Nom');
+    const directory = store.directory();
+    if (directory.some((n) => fold(n) === fold(name))) throw new HttpError(409, `« ${name} » est déjà dans l'annuaire.`);
+    store.saveDirectory([...directory, name]);
+    return [...directory, name];
+  }
+
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     // Usage local sans compte : un autre site ouvert dans le navigateur ne doit ni lire les données
     // (nom d'hôte détourné, « DNS rebinding ») ni lancer un compte-rendu (formulaire envoyé en douce).
@@ -237,6 +291,9 @@ export function createApp(options: { dataDir?: string; pipeline?: Pipeline; corr
     }
 
     if (req.method === 'POST' && path === '/api/comptes-rendus') return sendJson(res, 201, await create(req));
+    if (req.method === 'GET' && path === '/api/comptes-rendus') return sendJson(res, 200, search(url.searchParams.get('q') ?? ''));
+    if (req.method === 'PUT' && path === '/api/groupes') return sendJson(res, 200, saveGroups((await readJson(req)).groupes));
+    if (req.method === 'POST' && path === '/api/annuaire') return sendJson(res, 200, addToDirectory((await readJson(req)).nom));
 
     const m = /^\/api\/comptes-rendus\/([^/]+)(?:\/(.+))?$/.exec(path);
     if (m) {

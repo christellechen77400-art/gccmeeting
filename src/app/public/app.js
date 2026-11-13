@@ -1,4 +1,4 @@
-// Interface GCC Meeting (sans framework). Écrans : #/nouveau, #/cr/<id> ; les autres arrivent aux étapes suivantes.
+// Interface GCC Meeting (sans framework). Écrans : #/nouveau, #/cr/<id>, #/comptes-rendus, #/annuaire ; #/regles arrive à l'étape 5.
 
 const AUDIO = ['.m4a', '.mp3', '.wav', '.webm', '.mp4', '.ogg'];
 const ACCEPT = [...AUDIO, '.pdf', '.docx', '.txt', '.md'];
@@ -14,10 +14,14 @@ const ICONS = {
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   up: '<path d="M12 19V5M5 12l7-7 7 7"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/>',
+  chevron: '<path d="M9 6l6 6-6 6"/>',
 };
 const icon = (name) => `<svg aria-hidden="true" viewBox="0 0 24 24">${ICONS[name]}</svg>`;
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const fold = (s) => String(s).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 const today = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris' }).format(new Date());
 const frDate = (d) => new Date(`${d}T12:00:00Z`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 const ext = (name) => (name.match(/\.[^.]+$/)?.[0] ?? '').toLowerCase();
@@ -52,8 +56,6 @@ async function api(path, options) {
 // ---------- navigation ----------
 
 const SOON = {
-  'comptes-rendus': ['Comptes-rendus', 'L\'historique, la recherche et les filtres arrivent à l\'étape 4.'],
-  annuaire: ['Annuaire et groupes', 'La modification des groupes et de l\'annuaire arrive à l\'étape 4.'],
   regles: ['Règles apprises', 'Les règles arrivent à l\'étape 5.'],
 };
 
@@ -64,6 +66,8 @@ function route() {
     a.classList.toggle('on', a.dataset.screen === (name === 'cr' ? 'comptes-rendus' : name));
   }
   if (name === 'cr' && id) return showCompteRendu(id);
+  if (name === 'comptes-rendus') return showListe();
+  if (name === 'annuaire') return showAnnuaire();
   if (SOON[name]) {
     setCat(null);
     $('#screen').innerHTML = `<header><h1>${SOON[name][0]}</h1><p class="lead soon">${SOON[name][1]}</p></header>`;
@@ -75,6 +79,8 @@ function route() {
 // ---------- écran 1 : nouveau compte-rendu ----------
 
 function showNouveau() {
+  // Groupe renommé ou supprimé entre-temps dans « Annuaire et groupes ».
+  if (draft.groupe && !config.groupes[draft.groupe]) { draft.groupe = ''; draft.people = []; draft.absents.clear(); }
   setCat(draft.categorie);
   $('#screen').innerHTML = `
     <header><h1>Nouveau compte-rendu</h1><p class="lead">Dépose un enregistrement ou tes notes : le compte-rendu se rédige tout seul.</p></header>
@@ -595,6 +601,231 @@ function renderWhatsapp() {
       <button class="x" id="waclose" aria-label="Fermer">${icon('x')}</button></div>
     ${wa.texte ? `<textarea readonly id="watext">${esc(wa.texte)}</textarea>` : ''}</div>`;
   $('#waclose').onclick = () => { view.whatsapp = null; renderWhatsapp(); };
+}
+
+// ---------- écran 3 : comptes-rendus ----------
+
+const ETATS = [['', 'Tous les états'], ['en_cours', 'En cours'], ['pret', 'Prêts'], ['erreur', 'Erreurs']];
+const EN_COURS = { transcription: 'Transcription en cours…', redaction: 'Rédaction en cours…', mise_en_page: 'Mise en page…' };
+const liste = { q: '', categorie: '', etat: '', items: null, error: null, timer: null };
+
+function showListe() {
+  setCat(liste.categorie || null);
+  $('#screen').innerHTML = `
+    <div class="head"><header><h1>Comptes-rendus</h1><p class="lead">Toutes les réunions, les plus récentes en premier</p></header>
+      <a class="primary big" href="#/nouveau">+ Nouveau compte-rendu</a></div>
+    <label class="searchbox">${icon('search')}<span class="sr">Rechercher</span>
+      <input id="q" type="search" placeholder="Rechercher un mot, une personne, une décision…" value="${esc(liste.q)}" autocomplete="off"></label>
+    <div class="filters">
+      <div class="chips" role="group" aria-label="Catégorie">
+        <button class="cat${liste.categorie ? '' : ' on all'}" data-filter="">Tout</button>
+        ${config.categories.map((c) => `<button class="cat${liste.categorie === c.nom ? ' on' : ''}" data-filter="${esc(c.nom)}"
+          style="${liste.categorie === c.nom ? `background:${c.couleur}` : ''}"><i style="background:${c.couleur}"></i>${esc(c.nom)}</button>`).join('')}
+      </div>
+      <label class="field inline"><span class="sr">État</span><select id="etat">
+        ${ETATS.map(([v, label]) => `<option value="${v}"${liste.etat === v ? ' selected' : ''}>${label}</option>`).join('')}</select></label>
+    </div>
+    <section class="panel list" id="rows"></section>`;
+  for (const b of document.querySelectorAll('[data-filter]')) b.onclick = () => { liste.categorie = b.dataset.filter; showListe(); };
+  $('#etat').onchange = (e) => { liste.etat = e.target.value; renderRows(); };
+  let debounce;
+  $('#q').oninput = (e) => { liste.q = e.target.value; clearTimeout(debounce); debounce = setTimeout(loadListe, 250); };
+  renderRows();
+  loadListe();
+}
+
+async function loadListe() {
+  clearTimeout(liste.timer);
+  const q = liste.q;
+  try {
+    const items = await api(`/api/comptes-rendus?q=${encodeURIComponent(q)}`);
+    if (q !== liste.q) return; // une recherche plus récente est partie
+    liste.items = items;
+    liste.error = null;
+  } catch (err) {
+    liste.error = err.message;
+  }
+  if (location.hash !== '#/comptes-rendus') return;
+  renderRows();
+  // Rafraîchi tant qu'un compte-rendu se prépare.
+  if (liste.items?.some((m) => m.etat === 'en_cours')) liste.timer = setTimeout(loadListe, POLL_MS);
+}
+
+function renderRows() {
+  const el = $('#rows');
+  if (!el) return;
+  if (liste.error) { el.innerHTML = `<div class="error">${esc(liste.error)}</div>`; return; }
+  if (!liste.items) { el.innerHTML = '<p class="hint">Chargement…</p>'; return; }
+  const items = liste.items.filter((m) => (!liste.categorie || m.categorie === liste.categorie) && (!liste.etat || m.etat === liste.etat));
+  if (!items.length) {
+    el.innerHTML = `<p class="empty">${liste.items.length || liste.q ? 'Aucun compte-rendu ne correspond.' : 'Aucun compte-rendu pour l\'instant. <a href="#/nouveau">Créer le premier</a>'}</p>`;
+    return;
+  }
+  el.innerHTML = items.map((m) => {
+    const color = catColor(m.categorie);
+    const d = new Date(`${m.date}T12:00:00Z`);
+    const extra = m.etat === 'pret' ? [m.presents.length ? `${m.presents.length} participant${m.presents.length > 1 ? 's' : ''}` : '', m.overflow ? '2 pages' : '1 page'].filter(Boolean) : [];
+    const state = m.etat === 'pret' ? `<span class="ok">Prêt</span>${icon('chevron')}`
+      : m.etat === 'erreur' ? `<span class="ko" title="${esc(m.erreur)}">Erreur</span>${icon('chevron')}`
+      : `<span class="wait"><i class="spin"></i>${EN_COURS[m.etape] ?? 'En cours…'}</span>`;
+    return `<a class="row" href="#/cr/${m.id}" style="--c:${color}">
+      <span class="day"><b>${d.getUTCDate()}</b>${d.toLocaleDateString('fr-FR', { month: 'short', timeZone: 'UTC' })}</span>
+      <span class="what"><b>${esc(m.titre || 'Compte-rendu en préparation')}</b>
+        <span><span class="svcs"><i></i>${[m.categorie, m.groupe].filter(Boolean).map(esc).join(' · ')}</span>${extra.map((x) => ` · ${x}`).join('')}</span></span>
+      <span class="state">${state}</span></a>`;
+  }).join('');
+}
+
+// ---------- écran 4 : annuaire et groupes ----------
+
+const annuaire = { tab: 'groupes', edit: null, q: '', adding: '', error: null };
+// edit : { original (nom actuel, '' pour un nouveau), nom, membres, q, confirm, error }
+
+// Groupes où figure une personne, pour les suggestions.
+const groupsOf = (name) => Object.keys(config.groupes).filter((g) => config.groupes[g].includes(name));
+
+function showAnnuaire() {
+  setCat(null);
+  const tab = (id, label) => `<button role="tab" data-atab="${id}" aria-selected="${annuaire.tab === id}">${label}</button>`;
+  $('#screen').innerHTML = `
+    <div class="head"><header><h1>Annuaire et groupes</h1><p class="lead">Qui participe à quelle réunion. Tout se modifie.</p></header>
+      <div class="actions"><div class="tabs" role="tablist">${tab('groupes', 'Groupes')}${tab('annuaire', `Annuaire · ${config.annuaire.length}`)}</div>
+      ${annuaire.tab === 'groupes' ? '<button class="primary big" id="newgroup">+ Nouveau groupe</button>' : ''}</div></div>
+    <div id="abody"></div>`;
+  for (const b of document.querySelectorAll('[data-atab]')) b.onclick = () => { annuaire.tab = b.dataset.atab; showAnnuaire(); };
+  if ($('#newgroup')) $('#newgroup').onclick = () => editGroup('');
+  if (annuaire.tab === 'groupes') renderGroups(); else renderDirectory();
+}
+
+function renderGroups() {
+  const el = $('#abody');
+  const edit = annuaire.edit;
+  const cards = Object.entries(config.groupes).map(([g, members]) => {
+    const on = edit && edit.original === g;
+    return `<article class="panel gcard${on ? ' on' : ''}">
+      <div class="gtop"><div><h2>${esc(g)}</h2><span class="count">${members.length} personne${members.length > 1 ? 's' : ''}</span></div>
+        ${on ? '<span class="badge">En cours de modification</span>' : `<button class="x pen" data-edit="${esc(g)}" aria-label="Modifier ${esc(g)}">${icon('pen')}</button>`}</div>
+      <p>${members.map(esc).join(' · ') || '<span class="small">Aucun membre</span>'}</p></article>`;
+  }).join('');
+  el.innerHTML = `<div class="cols"><div class="gcards">${cards || '<p class="empty">Aucun groupe. Crée le premier avec « + Nouveau groupe ».</p>'}</div>
+    ${edit ? '<section class="panel side editor" id="editor"></section>' : ''}</div>`;
+  for (const b of el.querySelectorAll('[data-edit]')) b.onclick = () => editGroup(b.dataset.edit);
+  if (edit) renderEditor();
+}
+
+function editGroup(name) {
+  annuaire.edit = { original: name, nom: name, membres: [...(config.groupes[name] ?? [])], q: '', confirm: false, error: null };
+  renderGroups();
+  $('#gname')?.focus();
+}
+
+function renderEditor() {
+  const el = $('#editor');
+  const edit = annuaire.edit;
+  const q = edit.q.trim();
+  const matches = q ? config.annuaire.filter((n) => !edit.membres.includes(n) && fold(n).includes(fold(q))).slice(0, 6) : [];
+  const exact = config.annuaire.some((n) => fold(n) === fold(q));
+  el.innerHTML = `<h2>${edit.original ? `Modifier · ${esc(edit.original)}` : 'Nouveau groupe'}</h2>
+    <label class="field">Nom du groupe<input id="gname" value="${esc(edit.nom)}" maxlength="60"></label>
+    <div class="field"><span>Membres · ${edit.membres.length}</span><div class="people">
+      ${edit.membres.map((m) => `<span class="person member">${esc(m)}<button class="rm" data-rm="${esc(m)}" aria-label="Retirer ${esc(m)}">×</button></span>`).join('') || '<span class="small">Aucun membre pour l\'instant.</span>'}
+    </div></div>
+    <label class="field">Ajouter une personne<input id="gq" value="${esc(edit.q)}" placeholder="Prénom ou nom…" autocomplete="off"></label>
+    ${q ? `<div class="suggest">${matches.map((n) => `<button data-pick="${esc(n)}"><b>${esc(n)}</b>${groupsOf(n).length ? ` <span>· ${esc(groupsOf(n).join(', '))}</span>` : ''}</button>`).join('')}
+      ${exact ? '' : `<button class="addnew" data-new="${esc(q)}">+ Ajouter « ${esc(q)} » à l'annuaire</button>`}</div>` : ''}
+    ${edit.error ? `<div class="error">${esc(edit.error)}</div>` : ''}
+    <div class="buttons"><button class="secondary" id="gcancel">Annuler</button><button class="primary" id="gsave">Enregistrer</button></div>
+    ${edit.original ? `<button class="linkbtn danger" id="gdel">${edit.confirm ? 'Confirmer la suppression du groupe' : 'Supprimer le groupe'}</button>` : ''}`;
+  $('#gname').oninput = (e) => { edit.nom = e.target.value; };
+  $('#gq').oninput = (e) => {
+    edit.q = e.target.value;
+    renderEditor();
+    const input = $('#gq');
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  };
+  $('#gq').onkeydown = (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const first = $('#editor [data-pick]') ?? $('#editor [data-new]');
+    first?.click();
+  };
+  for (const b of el.querySelectorAll('[data-rm]')) b.onclick = () => { edit.membres = edit.membres.filter((m) => m !== b.dataset.rm); renderEditor(); };
+  for (const b of el.querySelectorAll('[data-pick]')) b.onclick = () => { edit.membres.push(b.dataset.pick); edit.q = ''; renderEditor(); $('#gq').focus(); };
+  const add = $('[data-new]', el);
+  if (add) add.onclick = async () => {
+    try {
+      config.annuaire = await api('/api/annuaire', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nom: add.dataset.new }) });
+      edit.membres.push(config.annuaire.at(-1));
+      edit.q = '';
+      edit.error = null;
+    } catch (err) {
+      edit.error = err.message;
+    }
+    renderEditor();
+  };
+  $('#gcancel').onclick = () => { annuaire.edit = null; renderGroups(); };
+  $('#gsave').onclick = () => {
+    const nom = edit.nom.trim();
+    if (!nom) { edit.error = 'Donne un nom au groupe.'; return renderEditor(); }
+    if (nom !== edit.original && config.groupes[nom]) { edit.error = `Un groupe s'appelle déjà « ${nom} ».`; return renderEditor(); }
+    // Ordre des groupes gardé ; un groupe renommé reste à sa place.
+    const groupes = {};
+    for (const [g, members] of Object.entries(config.groupes)) groupes[g === edit.original ? nom : g] = g === edit.original ? edit.membres : members;
+    if (!edit.original) groupes[nom] = edit.membres;
+    saveGroups(groupes);
+  };
+  if ($('#gdel')) $('#gdel').onclick = () => {
+    if (!edit.confirm) { edit.confirm = true; return renderEditor(); }
+    const groupes = { ...config.groupes };
+    delete groupes[edit.original];
+    saveGroups(groupes);
+  };
+}
+
+async function saveGroups(groupes) {
+  try {
+    config.groupes = await api('/api/groupes', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupes }) });
+    annuaire.edit = null;
+    renderGroups();
+  } catch (err) {
+    annuaire.edit.error = err.message;
+    renderEditor();
+  }
+}
+
+function renderDirectory() {
+  const el = $('#abody');
+  const q = fold(annuaire.q.trim());
+  const names = config.annuaire.filter((n) => fold(n).includes(q));
+  el.innerHTML = `<section class="panel">
+    <div class="dirtools">
+      <label class="searchbox small-box">${icon('search')}<span class="sr">Rechercher</span><input id="dq" type="search" placeholder="Rechercher dans l'annuaire…" value="${esc(annuaire.q)}" autocomplete="off"></label>
+      <form class="addbox" id="dadd"><input id="dname" placeholder="Nouveau nom (Prénom I.)" value="${esc(annuaire.adding)}" maxlength="60" autocomplete="off"><button class="add">+ Ajouter</button></form>
+    </div>
+    ${annuaire.error ? `<div class="error">${esc(annuaire.error)}</div>` : ''}
+    <ul class="dir">${names.map((n) => `<li><b>${esc(n)}</b>${groupsOf(n).length ? `<span>${esc(groupsOf(n).join(', '))}</span>` : ''}</li>`).join('')
+      || '<li class="empty">Personne ne correspond.</li>'}</ul></section>`;
+  $('#dq').oninput = (e) => {
+    annuaire.q = e.target.value;
+    renderDirectory();
+    const input = $('#dq');
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  };
+  $('#dname').oninput = (e) => { annuaire.adding = e.target.value; };
+  $('#dadd').onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+      config.annuaire = await api('/api/annuaire', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nom: annuaire.adding }) });
+      annuaire.q = annuaire.adding.trim();
+      annuaire.adding = '';
+      annuaire.error = null;
+    } catch (err) {
+      annuaire.error = err.message;
+    }
+    showAnnuaire();
+  };
 }
 
 // ---------- démarrage ----------

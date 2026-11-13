@@ -74,6 +74,14 @@ export class Store {
     return this.readJson('groupes.json');
   }
 
+  saveDirectory(names: string[]): void {
+    this.writeJson('annuaire.json', names);
+  }
+
+  saveGroups(groups: Record<string, string[]>): void {
+    this.writeJson('groupes.json', groups);
+  }
+
   rules(): Rule[] {
     return this.readJson('regles.json');
   }
