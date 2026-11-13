@@ -34,6 +34,7 @@ const RESULT_FILES: Record<string, string> = {
 const MAX_JSON = 100_000; // corps JSON d'une requête de l'interface, en octets
 const MAX_REQUEST = 2000; // caractères d'une demande de correction
 const MAX_NAME = 60; // caractères d'un nom de personne ou de groupe
+const MAX_RULE = 200; // caractères d'un champ de règle (src/rules.ts)
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export const APP_HEADER = 'x-gcc-meeting'; // envoyé par l'interface pour toute modification
 
@@ -69,6 +70,10 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
 
 // Recherche sans tenir compte des majuscules ni des accents.
 const fold = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+
+// Textes d'un compte-rendu (valeurs seulement, pas les noms des champs), pour la recherche.
+const strings = (v: unknown): string[] =>
+  typeof v === 'string' ? [v] : v && typeof v === 'object' ? Object.values(v).flatMap(strings) : [];
 
 function cleanName(value: unknown, what: string): string {
   const name = typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
@@ -219,7 +224,8 @@ export function createApp(options: { dataDir?: string; pipeline?: Pipeline; corr
     correction.choix = choix;
     let regle;
     if (choix === 'regle') {
-      regle = store.addRule(correction.regle ?? { type: 'redaction', texte: correction.demande }, meta.titre);
+      const texte = correction.demande.length > MAX_RULE ? `${correction.demande.slice(0, MAX_RULE - 1)}…` : correction.demande;
+      regle = store.addRule(correction.regle ?? fieldsOf({ type: 'redaction', texte }), meta.titre);
       correction.regleId = regle.id;
     }
     store.saveCorrections(meta.id, corrections);
@@ -235,9 +241,8 @@ export function createApp(options: { dataDir?: string; pipeline?: Pipeline; corr
     return list.filter((meta) => {
       const folder = store.folder(meta.id)!;
       const parts = [meta.titre, meta.categorie, meta.groupe, ...meta.presents, ...meta.absents, meta.source.nom];
-      for (const file of ['cr.json', 'cr.texte.txt']) {
-        if (existsSync(join(folder, file))) parts.push(readFileSync(join(folder, file), 'utf-8'));
-      }
+      if (existsSync(join(folder, 'cr.json'))) parts.push(...strings(JSON.parse(readFileSync(join(folder, 'cr.json'), 'utf-8'))));
+      if (existsSync(join(folder, 'cr.texte.txt'))) parts.push(readFileSync(join(folder, 'cr.texte.txt'), 'utf-8'));
       const text = fold(parts.filter(Boolean).join('\n'));
       return words.every((w) => text.includes(w));
     });
@@ -336,6 +341,7 @@ export function createApp(options: { dataDir?: string; pipeline?: Pipeline; corr
       const rest = m[2];
       if (req.method === 'GET' && !rest) return sendJson(res, 200, meta);
       if (req.method === 'GET' && rest === 'whatsapp') {
+        if (meta.etat !== 'pret') throw new HttpError(409, 'Le compte-rendu n\'est pas prêt.');
         return sendJson(res, 200, { texte: whatsappText(parseCompteRendu(readFileSync(join(folder, 'cr.json'), 'utf-8'))) });
       }
       if (req.method === 'GET' && rest === 'corrections') {

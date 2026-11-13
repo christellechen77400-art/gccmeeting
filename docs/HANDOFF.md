@@ -2,6 +2,31 @@
 
 À mettre à jour à la fin de chaque conversation (Claude ou Claude Code). Le plus récent en haut.
 
+## 13/11/2026 — Claude Code, Mission 6 : relecture des étapes 3 à 5 et bilan
+**Relecture indépendante** (agent `verificateur`, lecture seule) : aucun défaut de sécurité ; 8 défauts corrigés, chacun avec un test ou un essai dans le navigateur :
+- quitter l'aperçu pendant une correction affichait une fausse erreur au retour ;
+- une règle déjà connue, ajoutée en minuscules, remplaçait le mot d'origine (« Davidson » n'était plus remplacé) ; elle s'affichait aussi en double jusqu'au rechargement ;
+- « Retenir comme règle » sur une très longue demande créait une règle impossible à modifier (coupée maintenant à 200 caractères) ;
+- la recherche trouvait les noms des champs du JSON (« participants », « elements »…) ;
+- double clic sur « Retenir comme règle » : fausse erreur « Choix déjà fait » ;
+- un interrupteur de règle en échec masquait toute la liste ;
+- texte WhatsApp demandé sur un compte-rendu pas prêt : erreur 500 avec un chemin local (409 maintenant).
+- Tests : `npm test` → 43 OK ; `npm run typecheck` → sans erreur.
+
+**À valider par Christelle**
+- Écarts avec les maquettes : groupes sans catégorie ; glossaire et consignes de base restés dans `src/prompt.md` (pas dans l'écran) ; pas de carte surlignée dans l'aperçu après une correction (l'aperçu est l'image PNG).
+- Hors étapes 3 à 5 : « car Rémi » → « Karémy » ajouté à `src/remplacements.json` (erreur Whisper de l'étape 2).
+- Toujours ouverts : l'exception git `data/membres_groupes.json` et les espacements −10 %.
+
+**Pas vérifié**
+- Le vrai micro du Mac, un enregistrement de plus de 25 Mo.
+- Avec la vraie IA : une seule création et deux corrections (étape 3) ; pas d'essai réel d'une règle de rédaction ou de glossaire sur un nouveau compte-rendu (vérifié seulement par test : elles sont bien ajoutées à la consigne).
+- Safari et Firefox (seulement Chromium).
+
+**À tester par Christelle** : `npm run app` dans un onglet de terminal séparé, puis http://localhost:3000 (liste détaillée dans le message de fin de session).
+
+**Ensuite** : tests de Christelle, puis fusion dans `main` après son accord (tag `BeforeAnySignificantChange-MAJ04` avant).
+
 ## 13/11/2026 — Claude Code, Mission 6, étape 5 : écran « Règles apprises »
 **Fait** (branche `mission-6-interface`, pas fusionnée)
 - Trois parties comme la maquette : « Noms et mots mal transcrits » (forme barrée → bonne forme, « Appris le … · réunion » ou « Ajouté le … », interrupteur), « Façon de rédiger » (consigne, exemple, interrupteur), « Glossaire GCC » (pastilles ; une règle désactivée est barrée).

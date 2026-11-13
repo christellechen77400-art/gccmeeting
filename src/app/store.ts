@@ -97,11 +97,13 @@ export class Store {
   addRule(fields: RuleFields, origine?: string): Rule {
     const rules = this.rules();
     const key = RULE_KEY[fields.type];
-    const same = rules.find((r) => r.type === fields.type && r[key]?.toLowerCase() === fields[key]?.toLowerCase());
-    if (same) {
-      Object.assign(same, fields, { actif: true }, origine && { origine });
+    const index = rules.findIndex((r) => r.type === fields.type && r[key]?.toLowerCase() === fields[key]?.toLowerCase());
+    if (index >= 0) {
+      // Le mot de la règle existante est gardé tel quel : le remplacement tient compte des majuscules.
+      const { id, creeLe, origine: before } = rules[index];
+      rules[index] = { id, ...fields, [key]: rules[index][key], actif: true, creeLe, ...((origine ?? before) && { origine: origine ?? before }) };
       this.saveRules(rules);
-      return same;
+      return rules[index];
     }
     const next = Math.max(0, ...rules.map((r) => Number(r.id.slice(1)) || 0)) + 1;
     const rule: Rule = { id: `r${next}`, ...fields, actif: true, creeLe: new Date().toISOString(), ...(origine && { origine }) };

@@ -421,6 +421,7 @@ async function showCompteRendu(id) {
   }
   if (view?.id !== id) view = { id, tab: 'corriger', corrections: [], pending: null, error: null, whatsapp: null };
   view.meta = meta;
+  view.error = null;
   screen.innerHTML = `<div class="head">${head}
       <div class="actions">
         <button class="secondary" id="whatsapp">Texte WhatsApp</button>
@@ -452,6 +453,7 @@ async function showCompteRendu(id) {
 
 // Aperçu et liens de téléchargement, à jour après chaque correction.
 function renderResult() {
+  if (!$('#crtitle')) return; // écran quitté pendant une correction : il sera redessiné au retour
   const { id, meta } = view;
   const file = (meta.titre || 'compte-rendu').replace(/[\\/:*?"<>|]/g, '-');
   const v = encodeURIComponent(meta.modifieLe ?? meta.creeLe);
@@ -501,7 +503,12 @@ function renderChat() {
   const chat = $('#chat');
   chat.scrollTop = chat.scrollHeight;
   $('#ask').onsubmit = (e) => { e.preventDefault(); sendCorrection($('#msg').value.trim()); };
-  for (const b of el.querySelectorAll('[data-choix]')) b.onclick = () => choose(Number(b.dataset.i), b.dataset.choix);
+  for (const b of el.querySelectorAll('[data-choix]')) {
+    b.onclick = () => {
+      for (const other of el.querySelectorAll(`[data-i="${b.dataset.i}"]`)) other.disabled = true;
+      choose(Number(b.dataset.i), b.dataset.choix);
+    };
+  }
   if (!view.pending) $('#msg').focus({ preventScroll: true });
 }
 
@@ -827,7 +834,7 @@ const RULE_TYPES = {
   redaction: { section: 'Façon de rédiger', label: 'Façon de rédiger', fields: [['texte', 'Consigne (ex. Toujours écrire l\'année avec un mois)'], ['detail', 'Exemple (facultatif)']] },
   glossaire: { section: 'Glossaire GCC', label: 'Mot du glossaire', fields: [['terme', 'Terme (ex. MD)'], ['definition', 'Définition (ex. directeur musical)']] },
 };
-const regles = { items: null, edit: null, error: null };
+const regles = { items: null, edit: null, error: null, notice: null }; // notice : échec d'un interrupteur
 // edit : { id ('' pour une nouvelle), type, champs, actif, confirm, error }
 
 async function showRegles() {
@@ -894,7 +901,9 @@ function renderRules() {
     if (!items.length) body = `${type === 'glossaire' ? body : ''}<p class="empty left">Aucune règle pour l'instant.</p>`;
     return `<section class="rulesec"><h2>${d.section} <span class="count">· ${items.length}</span></h2>${body}</section>`;
   }).join('');
-  el.innerHTML = (edit && !edit.id ? `<section class="panel">${ruleForm()}</section>` : '') + sections;
+  el.innerHTML = (regles.notice ? `<div class="error">${esc(regles.notice)}</div>` : '')
+    + (edit && !edit.id ? `<section class="panel">${ruleForm()}</section>` : '') + sections;
+  regles.notice = null;
 
   for (const b of el.querySelectorAll('[data-toggle]')) b.onclick = () => saveRule(b.dataset.toggle, { actif: b.getAttribute('aria-checked') !== 'true' });
   for (const b of el.querySelectorAll('[data-rule]')) b.onclick = () => editRule(regles.items.find((r) => r.id === b.dataset.rule));
@@ -928,7 +937,11 @@ function editRule(rule) {
 async function saveRule(id, change) {
   const json = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   try {
-    if (!id) regles.items.push(await api('/api/regles', json('POST', change)));
+    if (!id) {
+      // Une règle sur le même mot est mise à jour par le serveur : elle remplace l'ancienne dans la liste.
+      const saved = await api('/api/regles', json('POST', change));
+      regles.items = [...regles.items.filter((r) => r.id !== saved.id), saved];
+    }
     else if (!change) {
       await api(`/api/regles/${id}`, { method: 'DELETE' });
       regles.items = regles.items.filter((r) => r.id !== id);
@@ -938,7 +951,7 @@ async function saveRule(id, change) {
     }
     if (change?.actif === undefined || change?.champs || !id) regles.edit = null;
   } catch (err) {
-    if (regles.edit) regles.edit.error = err.message; else regles.error = err.message;
+    if (regles.edit) regles.edit.error = err.message; else regles.notice = err.message;
   }
   renderRules();
 }

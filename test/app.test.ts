@@ -146,6 +146,7 @@ test('interface : fichier déposé, erreurs de saisie, erreur de création, fich
     const failed = await waitReady(base, (await failing.json()).id);
     assert.equal(failed.etat, 'erreur');
     assert.equal(failed.erreur, 'Clé API refusée');
+    assert.equal((await fetch(`${base}/api/comptes-rendus/${failed.id}/whatsapp`)).status, 409);
 
     assert.equal((await fetch(`${base}/api/comptes-rendus/${meta.id}/meta.json`)).status, 404);
     assert.equal((await fetch(`${base}/api/comptes-rendus/${meta.id}/source.txt`)).status, 404);
@@ -237,15 +238,21 @@ test('écran 2 : correction, règle retenue ou non, transcription, texte WhatsAp
     const style = await (await postJson(`${url}/corrections/2/choix`, { choix: 'regle' })).json();
     assert.equal(style.resume, 'Rédaction : Toujours écrire l\'année');
     assert.equal(JSON.parse(readFileSync(join(dir, 'regles.json'), 'utf-8')).length, rules.length + 1);
+    // Demande très longue : la consigne est coupée à 200 caractères, comme toute règle, donc modifiable ensuite.
+    await postJson(`${url}/corrections`, { demande: 'Écris '.repeat(60) });
+    const long = await (await postJson(`${url}/corrections/3/choix`, { choix: 'regle' })).json();
+    assert.equal(long.regle.texte.length, 200);
+    assert.ok(long.regle.texte.endsWith('…'));
+    assert.equal((await sendJson(`${base}/api/regles/${long.regle.id}`, 'PUT', { champs: { texte: long.regle.texte } })).status, 200);
     const history = await (await fetch(`${url}/corrections`)).json();
-    assert.deepEqual(history.map((c: { choix: string }) => c.choix), ['regle', 'ici', 'regle']);
+    assert.deepEqual(history.map((c: { choix: string }) => c.choix), ['regle', 'ici', 'regle', 'regle']);
 
     // Erreurs : demande vide, IA en panne (rien n'est modifié), choix inconnu, sans en-tête.
     assert.equal((await (await postJson(`${url}/corrections`, { demande: ' ' })).json()).erreur, 'Écris ce qu\'il faut corriger.');
     const broken = await postJson(`${url}/corrections`, { demande: 'PANNE' });
     assert.equal(broken.status, 502);
     assert.match((await broken.json()).erreur, /connexion/);
-    assert.equal((await (await fetch(`${url}/corrections`)).json()).length, 3);
+    assert.equal((await (await fetch(`${url}/corrections`)).json()).length, 4);
     assert.equal((await postJson(`${url}/corrections/9/choix`, { choix: 'regle' })).status, 404);
     assert.equal((await postJson(`${url}/corrections/1/choix`, { choix: 'tout' })).status, 400);
     assert.equal((await fetch(`${url}/corrections`, { method: 'POST', body: '{"demande":"x"}' })).status, 403);
@@ -276,6 +283,7 @@ test('écran 3 : historique, recherche plein texte sans accents, tous les mots',
     assert.deepEqual(await ids('Esther'), [b.id, a.id]); // absente
     assert.deepEqual(await ids('batterie'), [b.id, a.id]); // texte du compte-rendu (exemple musiciens)
     assert.deepEqual(await ids('zorglub introuvable'), []);
+    assert.deepEqual(await ids('participants elements'), []); // noms des champs du JSON : pas cherchés
   } finally {
     server.close();
   }
@@ -330,7 +338,7 @@ test('écran 5 : règles ajoutées, modifiées, désactivées, supprimées, puis
     // Même mot qu'une règle existante (désactivée) : mise à jour et réactivée, pas de doublon.
     await sendJson(`${base}/api/regles/r2`, 'PUT', { actif: false });
     const same = await (await sendJson(`${base}/api/regles`, 'POST', { type: 'nom', de: rules[1].de.toUpperCase(), vers: 'Autre forme' })).json();
-    assert.deepEqual([same.id, same.vers, same.actif], ['r2', 'Autre forme', true]);
+    assert.deepEqual([same.id, same.de, same.vers, same.actif], ['r2', rules[1].de, 'Autre forme', true]); // le mot reste tel quel
     assert.equal((await (await fetch(`${base}/api/regles`)).json()).length, rules.length);
 
     const added = await sendJson(`${base}/api/regles`, 'POST', { type: 'glossaire', terme: ' MD ', definition: 'directeur musical' });
