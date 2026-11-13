@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { startConversation } from '../src/pipeline.ts';
 import { checkRuleFields, describeRule, replacementsFrom, rulesFromReplacements, rulesPrompt, type Rule } from '../src/rules.ts';
 import { whatsappText } from '../src/whatsapp.ts';
 
@@ -40,4 +41,19 @@ test('texte WhatsApp : titre, À retenir, étapes, présents, gras converti', ()
     '*Prochaines étapes*', '• Jonathan Z. : Planning (décembre 2026)', '',
     'Présents (2) : Jonathan Z., Eva Y.', 'Absents : Esther C.', '', 'Compte-rendu complet en PDF.',
   ].join('\n'));
+});
+
+test('consigne de l\'IA : annuaire et règles actives ajoutés à prompt.md', () => {
+  const key = process.env.ANTHROPIC_API_KEY;
+  process.env.ANTHROPIC_API_KEY = 'essai'; // aucun appel : la conversation est seulement préparée
+  try {
+    const { system } = startConversation(['Paul W.'], rules, '\n\nFin.');
+    assert.match(system, /# Membres connus[^]*Paul W\.\n*# Règles apprises/);
+    assert.match(system, /« Davidson » → « David S. »/);
+    assert.doesNotMatch(system, /car Rémi/);
+    assert.ok(system.endsWith('Fin.'));
+    assert.doesNotMatch(startConversation(['Paul W.']).system, /Règles apprises/); // npm run cr : inchangé
+  } finally {
+    if (key === undefined) delete process.env.ANTHROPIC_API_KEY; else process.env.ANTHROPIC_API_KEY = key;
+  }
 });

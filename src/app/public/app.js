@@ -1,4 +1,4 @@
-// Interface GCC Meeting (sans framework). Écrans : #/nouveau, #/cr/<id>, #/comptes-rendus, #/annuaire ; #/regles arrive à l'étape 5.
+// Interface GCC Meeting (sans framework). Écrans : #/nouveau, #/cr/<id>, #/comptes-rendus, #/annuaire, #/regles.
 
 const AUDIO = ['.m4a', '.mp3', '.wav', '.webm', '.mp4', '.ogg'];
 const ACCEPT = [...AUDIO, '.pdf', '.docx', '.txt', '.md'];
@@ -55,10 +55,6 @@ async function api(path, options) {
 
 // ---------- navigation ----------
 
-const SOON = {
-  regles: ['Règles apprises', 'Les règles arrivent à l\'étape 5.'],
-};
-
 function route() {
   const [screen, id] = location.hash.replace(/^#\/?/, '').split('/');
   const name = screen || 'nouveau';
@@ -68,11 +64,7 @@ function route() {
   if (name === 'cr' && id) return showCompteRendu(id);
   if (name === 'comptes-rendus') return showListe();
   if (name === 'annuaire') return showAnnuaire();
-  if (SOON[name]) {
-    setCat(null);
-    $('#screen').innerHTML = `<header><h1>${SOON[name][0]}</h1><p class="lead soon">${SOON[name][1]}</p></header>`;
-    return;
-  }
+  if (name === 'regles') return showRegles();
   showNouveau();
 }
 
@@ -826,6 +818,129 @@ function renderDirectory() {
     }
     showAnnuaire();
   };
+}
+
+// ---------- écran 5 : règles apprises ----------
+
+const RULE_TYPES = {
+  nom: { section: 'Noms et mots mal transcrits', label: 'Nom ou mot mal transcrit', fields: [['de', 'Mal transcrit (ex. Davidson)'], ['vers', 'Bonne forme (ex. David S.)']] },
+  redaction: { section: 'Façon de rédiger', label: 'Façon de rédiger', fields: [['texte', 'Consigne (ex. Toujours écrire l\'année avec un mois)'], ['detail', 'Exemple (facultatif)']] },
+  glossaire: { section: 'Glossaire GCC', label: 'Mot du glossaire', fields: [['terme', 'Terme (ex. MD)'], ['definition', 'Définition (ex. directeur musical)']] },
+};
+const regles = { items: null, edit: null, error: null };
+// edit : { id ('' pour une nouvelle), type, champs, actif, confirm, error }
+
+async function showRegles() {
+  setCat(null);
+  $('#screen').innerHTML = `
+    <div class="head"><header><h1>Règles apprises</h1><p class="lead">Ce que l'outil a retenu de tes corrections. Elles s'appliquent à chaque nouveau compte-rendu.</p></header>
+      <button class="primary big" id="newrule">+ Ajouter une règle</button></div>
+    <div id="rules"></div>`;
+  $('#newrule').onclick = () => editRule(null);
+  renderRules();
+  try {
+    regles.items = await api('/api/regles');
+    regles.error = null;
+  } catch (err) {
+    regles.error = err.message;
+  }
+  if (location.hash === '#/regles') renderRules();
+}
+
+const shortDate = (iso) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'Europe/Paris' });
+
+function toggle(rule) {
+  return `<button class="switch" role="switch" aria-checked="${rule.actif}" data-toggle="${rule.id}"
+    aria-label="${rule.actif ? 'Désactiver' : 'Activer'} la règle"><i></i></button>`;
+}
+
+function ruleForm() {
+  const edit = regles.edit;
+  const type = RULE_TYPES[edit.type];
+  return `<form class="ruleform" id="ruleform">
+    ${edit.id ? '' : `<label class="field">Type de règle<select id="rtype">${Object.entries(RULE_TYPES).map(([t, d]) =>
+      `<option value="${t}"${t === edit.type ? ' selected' : ''}>${d.label}</option>`).join('')}</select></label>`}
+    <div class="two">${type.fields.map(([key, label]) => `<label class="field">${esc(label.replace(/ \(.*\)$/, ''))}
+      <input data-field="${key}" value="${esc(edit.champs[key] ?? '')}" placeholder="${esc(label.match(/\((.*)\)$/)?.[1] ?? '')}" maxlength="200"></label>`).join('')}</div>
+    ${edit.error ? `<div class="error">${esc(edit.error)}</div>` : ''}
+    <div class="buttons">${edit.id ? `<button type="button" class="linkbtn danger" id="rdel">${edit.confirm ? 'Confirmer la suppression' : 'Supprimer la règle'}</button><span class="grow"></span>` : ''}
+      <button type="button" class="secondary" id="rcancel">Annuler</button><button class="primary">${edit.id ? 'Enregistrer' : 'Ajouter'}</button></div>
+  </form>`;
+}
+
+function renderRules() {
+  const el = $('#rules');
+  if (!el) return;
+  if (regles.error) { el.innerHTML = `<div class="error">${esc(regles.error)}</div>`; return; }
+  if (!regles.items) { el.innerHTML = '<p class="hint">Chargement…</p>'; return; }
+  const edit = regles.edit;
+  const origin = (r) => `<span class="small">${r.origine ? `Appris le ${shortDate(r.creeLe)} · ${esc(r.origine)}` : `Ajouté le ${shortDate(r.creeLe)}`}</span>`;
+  const row = (r, main) => (edit?.id === r.id
+    ? `<li class="rule editing">${ruleForm()}</li>`
+    : `<li class="rule${r.actif ? '' : ' off'}"><button class="ruletext" data-rule="${r.id}" title="Modifier">${main}${origin(r)}</button>${toggle(r)}</li>`);
+  const sections = Object.entries(RULE_TYPES).map(([type, d]) => {
+    const items = regles.items.filter((r) => r.type === type);
+    let body;
+    if (type === 'glossaire') {
+      const editing = items.find((r) => r.id === edit?.id);
+      body = `<p class="hint">Le glossaire de base (GCC, Franco, EDD, MD, Régie…) est déjà dans la consigne de l'IA : ajoute ici les nouveaux mots.</p>
+        ${items.length ? `<div class="gloss">${items.map((r) => `<button class="term${r.actif ? '' : ' off'}${editing === r ? ' on' : ''}" data-rule="${r.id}" title="Modifier"><b>${esc(r.terme)}</b> · ${esc(r.definition)}</button>`).join('')}</div>` : ''}
+        ${editing ? `<div class="panel">${ruleForm()}<label class="check"><input type="checkbox" id="ractif"${editing.actif ? ' checked' : ''}> Active</label></div>` : ''}`;
+    } else {
+      body = items.length ? `<ul class="panel rules">${items.map((r) => row(r, type === 'nom'
+        ? `<span><s>${esc(r.de)}</s> → <b>${esc(r.vers)}</b></span>`
+        : `<span><b>${esc(r.texte)}</b>${r.detail ? `<br><span class="small">${esc(r.detail)}</span>` : ''}</span>`)).join('')}</ul>` : '';
+    }
+    if (!items.length) body = `${type === 'glossaire' ? body : ''}<p class="empty left">Aucune règle pour l'instant.</p>`;
+    return `<section class="rulesec"><h2>${d.section} <span class="count">· ${items.length}</span></h2>${body}</section>`;
+  }).join('');
+  el.innerHTML = (edit && !edit.id ? `<section class="panel">${ruleForm()}</section>` : '') + sections;
+
+  for (const b of el.querySelectorAll('[data-toggle]')) b.onclick = () => saveRule(b.dataset.toggle, { actif: b.getAttribute('aria-checked') !== 'true' });
+  for (const b of el.querySelectorAll('[data-rule]')) b.onclick = () => editRule(regles.items.find((r) => r.id === b.dataset.rule));
+  if (!edit) return;
+  const form = $('#ruleform');
+  for (const input of form.querySelectorAll('[data-field]')) input.oninput = () => { edit.champs[input.dataset.field] = input.value; };
+  if ($('#rtype')) $('#rtype').onchange = (e) => { edit.type = e.target.value; edit.champs = {}; renderRules(); };
+  $('#rcancel').onclick = () => { regles.edit = null; renderRules(); };
+  if ($('#rdel')) $('#rdel').onclick = () => {
+    if (!edit.confirm) { edit.confirm = true; return renderRules(); }
+    saveRule(edit.id, null);
+  };
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    if (!edit.id) return saveRule('', { type: edit.type, ...edit.champs });
+    const change = { champs: edit.champs };
+    if ($('#ractif')) change.actif = $('#ractif').checked;
+    saveRule(edit.id, change);
+  };
+  form.querySelector('[data-field]').focus();
+}
+
+function editRule(rule) {
+  const champs = {};
+  if (rule) for (const [key] of RULE_TYPES[rule.type].fields) champs[key] = rule[key] ?? '';
+  regles.edit = { id: rule?.id ?? '', type: rule?.type ?? 'nom', champs, confirm: false, error: null };
+  renderRules();
+}
+
+// Ajout (id vide), modification ou activation (change), suppression (change null).
+async function saveRule(id, change) {
+  const json = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  try {
+    if (!id) regles.items.push(await api('/api/regles', json('POST', change)));
+    else if (!change) {
+      await api(`/api/regles/${id}`, { method: 'DELETE' });
+      regles.items = regles.items.filter((r) => r.id !== id);
+    } else {
+      const saved = await api(`/api/regles/${id}`, json('PUT', change));
+      regles.items = regles.items.map((r) => (r.id === id ? saved : r));
+    }
+    if (change?.actif === undefined || change?.champs || !id) regles.edit = null;
+  } catch (err) {
+    if (regles.edit) regles.edit.error = err.message; else regles.error = err.message;
+  }
+  renderRules();
 }
 
 // ---------- démarrage ----------

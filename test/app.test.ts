@@ -221,11 +221,13 @@ test('écran 2 : correction, règle retenue ou non, transcription, texte WhatsAp
     assert.equal(JSON.parse(readFileSync(join(dir, 'comptes-rendus', meta.id, 'cr.json'), 'utf-8')).titre, 'Réunion avec David S.');
     assert.notDeepEqual(readFileSync(join(dir, 'comptes-rendus', meta.id, 'cr.png')), pngBefore);
 
-    // « Retenir comme règle » : règle « nom » ajoutée, active, avec le titre d'origine ; un seul choix possible.
+    // « Retenir comme règle » : « Davidson » est déjà une règle de départ, elle prend le titre d'origine
+    // (pas de doublon) ; un seul choix possible.
     const chosen = await (await postJson(`${url}/corrections/0/choix`, { choix: 'regle' })).json();
     assert.equal(chosen.resume, 'Nom : « Davidson » → David S.');
     const rules = JSON.parse(readFileSync(join(dir, 'regles.json'), 'utf-8'));
-    assert.deepEqual(rules.at(-1), { ...chosen.regle, type: 'nom', de: 'Davidson', vers: 'David S.', actif: true, origine: 'Réunion avec David S.' });
+    assert.equal(rules.length, Object.keys(start).length);
+    assert.deepEqual(rules.find((r: { de: string }) => r.de === 'Davidson'), { ...chosen.regle, type: 'nom', de: 'Davidson', vers: 'David S.', actif: true, origine: 'Réunion avec David S.' });
     assert.equal((await postJson(`${url}/corrections/0/choix`, { choix: 'ici' })).status, 409);
 
     // Sans règle proposée : « Seulement ici » n'ajoute rien ; « Retenir » ferait une consigne de rédaction.
@@ -312,6 +314,49 @@ test('écran 4 : groupes créés, renommés, supprimés ; annuaire complété ; 
     assert.ok(calls.at(-1)!.directory.includes('Inconnu Z.'));
     // Sans l'en-tête de l'interface : refusé.
     assert.equal((await fetch(`${base}/api/groupes`, { method: 'PUT', body: '{"groupes":{}}' })).status, 403);
+  } finally {
+    server.close();
+  }
+});
+
+test('écran 5 : règles ajoutées, modifiées, désactivées, supprimées, puis données à la chaîne', async () => {
+  const { server, base, dir } = await start();
+  try {
+    const rules = await (await fetch(`${base}/api/regles`)).json();
+    assert.equal(rules.length, Object.keys(JSON.parse(readFileSync('src/remplacements.json', 'utf-8'))).length);
+    assert.ok(rules.every((r: { type: string; actif: boolean }) => r.type === 'nom' && r.actif));
+
+    // Ajout : champs contrôlés, identifiant suivant.
+    // Même mot qu'une règle existante (désactivée) : mise à jour et réactivée, pas de doublon.
+    await sendJson(`${base}/api/regles/r2`, 'PUT', { actif: false });
+    const same = await (await sendJson(`${base}/api/regles`, 'POST', { type: 'nom', de: rules[1].de.toUpperCase(), vers: 'Autre forme' })).json();
+    assert.deepEqual([same.id, same.vers, same.actif], ['r2', 'Autre forme', true]);
+    assert.equal((await (await fetch(`${base}/api/regles`)).json()).length, rules.length);
+
+    const added = await sendJson(`${base}/api/regles`, 'POST', { type: 'glossaire', terme: ' MD ', definition: 'directeur musical' });
+    assert.equal(added.status, 201);
+    const md = await added.json();
+    assert.deepEqual({ id: md.id, terme: md.terme, actif: md.actif }, { id: `r${rules.length + 1}`, terme: 'MD', actif: true });
+    assert.equal((await (await sendJson(`${base}/api/regles`, 'POST', { type: 'nom', de: 'x' })).json()).erreur, 'Remplis tous les champs de la règle.');
+    assert.equal((await sendJson(`${base}/api/regles`, 'POST', { type: 'autre' })).status, 400);
+
+    // Modification (le type ne change pas), désactivation, suppression.
+    const style = await (await sendJson(`${base}/api/regles`, 'POST', { type: 'redaction', texte: 'Phrases courtes' })).json();
+    const edited = await (await sendJson(`${base}/api/regles/${style.id}`, 'PUT', { champs: { type: 'nom', texte: 'Phrases très courtes', detail: 'Dix mots' } })).json();
+    assert.deepEqual([edited.type, edited.texte, edited.detail, edited.creeLe], ['redaction', 'Phrases très courtes', 'Dix mots', style.creeLe]);
+    assert.equal((await sendJson(`${base}/api/regles/${style.id}`, 'PUT', { champs: { texte: '' } })).status, 400);
+    assert.equal((await (await sendJson(`${base}/api/regles/r1`, 'PUT', { actif: false })).json()).actif, false);
+    assert.equal((await sendJson(`${base}/api/regles/r1`, 'PUT', { actif: 'non' })).status, 400);
+    assert.equal((await (await sendJson(`${base}/api/regles/${md.id}`, 'DELETE', {})).json()).supprime, md.id);
+    assert.equal((await sendJson(`${base}/api/regles/${md.id}`, 'DELETE', {})).status, 404);
+    assert.equal((await fetch(`${base}/api/regles/r1`, { method: 'DELETE' })).status, 403); // sans l'en-tête
+
+    // Le compte-rendu suivant reçoit les règles à jour.
+    await createFromNotes(base);
+    const given = calls.at(-1)!.rules!;
+    assert.deepEqual(given, JSON.parse(readFileSync(join(dir, 'regles.json'), 'utf-8')));
+    assert.equal(given.find((r) => r.id === 'r1')!.actif, false);
+    assert.ok(!given.some((r) => r.id === md.id));
   } finally {
     server.close();
   }

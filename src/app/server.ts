@@ -11,7 +11,7 @@ import { correctCompteRendu, type CorrectionInput, type CorrectionResult } from 
 import { SUPPORTED_EXTENSIONS } from '../extract.ts';
 import { createCompteRendu, type PipelineInput, type PipelineResult } from '../pipeline.ts';
 import { parseCompteRendu, render } from '../render.ts';
-import { describeRule } from '../rules.ts';
+import { checkRuleFields, describeRule, type Rule } from '../rules.ts';
 import { AUDIO_EXTENSIONS } from '../transcribe.ts';
 import { whatsappText } from '../whatsapp.ts';
 import { defaultDataDir, Store, type Meta, type Source } from './store.ts';
@@ -269,6 +269,33 @@ export function createApp(options: { dataDir?: string; pipeline?: Pipeline; corr
     return [...directory, name];
   }
 
+  // Écran « Règles apprises » : ajout, modification (le type ne change pas), activation, suppression.
+  function fieldsOf(value: unknown): Omit<Rule, 'id' | 'actif' | 'creeLe' | 'origine'> {
+    const fields = checkRuleFields(value);
+    if (typeof fields === 'string') throw new HttpError(400, fields);
+    return fields;
+  }
+
+  function changeRule(id: string, method: string, body: Record<string, unknown>): Rule | { supprime: string } {
+    const rules = store.rules();
+    const index = rules.findIndex((r) => r.id === id);
+    if (index < 0) throw new HttpError(404, 'Règle introuvable.');
+    if (method === 'DELETE') {
+      store.saveRules(rules.filter((r) => r.id !== id));
+      return { supprime: id };
+    }
+    const rule = rules[index];
+    const { de, vers, texte, detail, terme, definition, ...meta } = rule;
+    const changed: Rule = 'champs' in body ? { ...meta, ...fieldsOf({ ...(body.champs as object), type: rule.type }) } : { ...rule };
+    if ('actif' in body) {
+      if (typeof body.actif !== 'boolean') throw new HttpError(400, 'Requête mal formée.');
+      changed.actif = body.actif;
+    }
+    rules[index] = changed;
+    store.saveRules(rules);
+    return changed;
+  }
+
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     // Usage local sans compte : un autre site ouvert dans le navigateur ne doit ni lire les données
     // (nom d'hôte détourné, « DNS rebinding ») ni lancer un compte-rendu (formulaire envoyé en douce).
@@ -293,6 +320,12 @@ export function createApp(options: { dataDir?: string; pipeline?: Pipeline; corr
     if (req.method === 'POST' && path === '/api/comptes-rendus') return sendJson(res, 201, await create(req));
     if (req.method === 'GET' && path === '/api/comptes-rendus') return sendJson(res, 200, search(url.searchParams.get('q') ?? ''));
     if (req.method === 'PUT' && path === '/api/groupes') return sendJson(res, 200, saveGroups((await readJson(req)).groupes));
+    if (req.method === 'GET' && path === '/api/regles') return sendJson(res, 200, store.rules());
+    if (req.method === 'POST' && path === '/api/regles') return sendJson(res, 201, store.addRule(fieldsOf(await readJson(req))));
+    const rule = /^\/api\/regles\/(r\d+)$/.exec(path);
+    if (rule && (req.method === 'PUT' || req.method === 'DELETE')) {
+      return sendJson(res, 200, changeRule(rule[1], req.method, req.method === 'PUT' ? await readJson(req) : {}));
+    }
     if (req.method === 'POST' && path === '/api/annuaire') return sendJson(res, 200, addToDirectory((await readJson(req)).nom));
 
     const m = /^\/api\/comptes-rendus\/([^/]+)(?:\/(.+))?$/.exec(path);

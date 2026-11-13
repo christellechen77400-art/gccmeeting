@@ -10,6 +10,8 @@ import { rulesFromReplacements, type Rule, type RuleFields } from '../rules.ts';
 
 const CONFIG_DIR = fileURLToPath(new URL('../../config/', import.meta.url));
 const REPLACEMENTS = fileURLToPath(new URL('../remplacements.json', import.meta.url));
+// Champ qui identifie une règle : le mot mal transcrit, la consigne, le terme.
+const RULE_KEY = { nom: 'de', redaction: 'texte', glossaire: 'terme' } as const;
 const ID = /^[0-9]{8}-[0-9]{6}-[0-9a-f]{4}$/;
 
 export type Source = 'fichier' | 'notes' | 'enregistrement';
@@ -91,8 +93,16 @@ export class Store {
   }
 
   // Ajoute une règle et la renvoie (identifiant r1, r2… jamais réutilisé).
+  // Une règle sur le même mot (ou la même consigne) existe déjà : elle est mise à jour et réactivée.
   addRule(fields: RuleFields, origine?: string): Rule {
     const rules = this.rules();
+    const key = RULE_KEY[fields.type];
+    const same = rules.find((r) => r.type === fields.type && r[key]?.toLowerCase() === fields[key]?.toLowerCase());
+    if (same) {
+      Object.assign(same, fields, { actif: true }, origine && { origine });
+      this.saveRules(rules);
+      return same;
+    }
     const next = Math.max(0, ...rules.map((r) => Number(r.id.slice(1)) || 0)) + 1;
     const rule: Rule = { id: `r${next}`, ...fields, actif: true, creeLe: new Date().toISOString(), ...(origine && { origine }) };
     this.saveRules([...rules, rule]);

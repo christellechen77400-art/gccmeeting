@@ -2,6 +2,16 @@
 
 À mettre à jour à la fin de chaque conversation (Claude ou Claude Code). Le plus récent en haut.
 
+## 13/11/2026 — Claude Code, Mission 6, étape 5 : écran « Règles apprises »
+**Fait** (branche `mission-6-interface`, pas fusionnée)
+- Trois parties comme la maquette : « Noms et mots mal transcrits » (forme barrée → bonne forme, « Appris le … · réunion » ou « Ajouté le … », interrupteur), « Façon de rédiger » (consigne, exemple, interrupteur), « Glossaire GCC » (pastilles ; une règle désactivée est barrée).
+- Cliquer une règle l'ouvre en modification (champs, « Active » pour le glossaire, suppression en deux clics) ; « + Ajouter une règle » avec le choix du type.
+- Les règles actives vont dans la consigne de l'IA à chaque compte-rendu et à chaque correction ; les règles « nom » actives sont aussi remplacées par le code (transcription et compte-rendu).
+- Une règle déjà connue est mise à jour au lieu d'être dupliquée ; « car Rémi » → « Karémy » ajouté aux règles de départ.
+- API : `GET` et `POST /api/regles`, `PUT` et `DELETE /api/regles/<id>`.
+- Tests : `npm test` → 43 OK ; `npm run typecheck` → sans erreur.
+- Navigateur (Chromium piloté, IA factice) : règles de départ affichées ; une correction « Retenir comme règle » apparaît dans l'écran ; 3 ajouts (un par type), champ manquant refusé, désactivation, modification, suppression ; le compte-rendu suivant reçoit exactement les règles à jour (actives et inactives marquées).
+
 ## 13/11/2026 — Claude Code, Mission 6, étape 4 : écrans « Comptes-rendus » et « Annuaire et groupes »
 **Fait** (branche `mission-6-interface`, pas fusionnée)
 - Écran 3 : historique (plus récent en premier), date en pastille à la couleur de la catégorie, « Catégorie · Groupe · N participants · 1 page », état (en cours avec l'étape, Prêt, Erreur) ; recherche plein texte (voir DECISIONS) ; filtres par catégorie et par état ; « + Nouveau compte-rendu ».
